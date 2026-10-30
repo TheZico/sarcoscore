@@ -1,0 +1,543 @@
+{
+  "version": "2026-10-27",
+  "pretest_probability": 0.1,
+  "probability_cap": 0.99,
+  "formula": "odds = p0/(1-p0) * 2^(total/2); probability = min(odds/(1+odds), 0.99)",
+  "levels": [
+    {
+      "name": "Low",
+      "min": 0,
+      "max": 0.3
+    },
+    {
+      "name": "Moderate",
+      "min": 0.3,
+      "max": 0.6
+    },
+    {
+      "name": "High",
+      "min": 0.6,
+      "max": 1.01
+    }
+  ],
+  "severity_tiers": [
+    [
+      1.0,
+      0.0
+    ],
+    [
+      1.5,
+      0.34
+    ],
+    [
+      2.0,
+      0.67
+    ],
+    [
+      999,
+      1.0
+    ]
+  ],
+  "features": [
+    {
+      "id": "fever_fatigue",
+      "label": "Fever / fatigue",
+      "group": "General",
+      "points": -1,
+      "pct_sarcoidosis": 0.667,
+      "pct_other": 0.8
+    },
+    {
+      "id": "night_sweats",
+      "label": "Night sweats",
+      "group": "General",
+      "points": -2,
+      "pct_sarcoidosis": 0.25,
+      "pct_other": 1.0
+    },
+    {
+      "id": "weight_loss",
+      "label": "Weight loss",
+      "group": "General",
+      "points": -1,
+      "pct_sarcoidosis": 0.375,
+      "pct_other": 0.5
+    },
+    {
+      "id": "muscle_pain",
+      "label": "Muscle pain",
+      "group": "General",
+      "points": -1,
+      "pct_sarcoidosis": 0.0,
+      "pct_other": 0.333
+    },
+    {
+      "id": "joint_back_pain",
+      "label": "Joint / back pain",
+      "group": "General",
+      "points": 2,
+      "pct_sarcoidosis": 0.583,
+      "pct_other": null
+    },
+    {
+      "id": "dry_cough",
+      "label": "Dry cough",
+      "group": "Chest",
+      "points": 2,
+      "pct_sarcoidosis": 0.571,
+      "pct_other": 0.25
+    },
+    {
+      "id": "shortness_of_breath",
+      "label": "Shortness of breath",
+      "group": "Chest",
+      "points": 1,
+      "pct_sarcoidosis": 0.667,
+      "pct_other": 1.0
+    },
+    {
+      "id": "palpitations_heart_block",
+      "label": "Palpitations / heart block",
+      "group": "Chest",
+      "points": 1,
+      "pct_sarcoidosis": 0.429,
+      "pct_other": 1.0
+    },
+    {
+      "id": "skin_lesions_itching",
+      "label": "Skin lesions / itching",
+      "group": "Skin, nose & mouth",
+      "points": 2,
+      "pct_sarcoidosis": 0.545,
+      "pct_other": 0.333
+    },
+    {
+      "id": "blocked_nose",
+      "label": "Blocked nose",
+      "group": "Skin, nose & mouth",
+      "points": 1,
+      "pct_sarcoidosis": 0.167,
+      "pct_other": 0.167
+    },
+    {
+      "id": "oral_ulcers",
+      "label": "Oral ulcers",
+      "group": "Skin, nose & mouth",
+      "points": 1,
+      "pct_sarcoidosis": 0.167,
+      "pct_other": 0.125
+    },
+    {
+      "id": "abdominal_pain",
+      "label": "Abdominal pain",
+      "group": "Abdomen",
+      "points": 0,
+      "pct_sarcoidosis": 0.357,
+      "pct_other": 0.5
+    },
+    {
+      "id": "chronic_diarrhea",
+      "label": "Chronic diarrhea",
+      "group": "Abdomen",
+      "points": 0,
+      "pct_sarcoidosis": 0.125,
+      "pct_other": 0.333
+    },
+    {
+      "id": "nausea_vomiting",
+      "label": "Nausea / vomiting",
+      "group": "Abdomen",
+      "points": 0,
+      "pct_sarcoidosis": 0.8,
+      "pct_other": null
+    },
+    {
+      "id": "jaundice",
+      "label": "Jaundice",
+      "group": "Abdomen",
+      "points": 0,
+      "pct_sarcoidosis": 0.75,
+      "pct_other": null
+    },
+    {
+      "id": "enlarged_liver",
+      "label": "Enlarged liver",
+      "group": "Abdomen",
+      "points": 0,
+      "pct_sarcoidosis": 0.0,
+      "pct_other": 0.143
+    },
+    {
+      "id": "enlarged_spleen",
+      "label": "Enlarged spleen",
+      "group": "Abdomen",
+      "points": 1,
+      "pct_sarcoidosis": 0.333,
+      "pct_other": null
+    },
+    {
+      "id": "enlarged_lymph_nodes",
+      "label": "Enlarged lymph nodes",
+      "group": "Other",
+      "points": 1,
+      "pct_sarcoidosis": 0.167,
+      "pct_other": 0.222
+    },
+    {
+      "id": "nerve_pain_numbness",
+      "label": "Nerve pain / numbness",
+      "group": "Other",
+      "points": 0,
+      "pct_sarcoidosis": 0.0,
+      "pct_other": 0.333
+    },
+    {
+      "id": "imaging_enlarged_chest_lymph_nodes",
+      "label": "Imaging: enlarged chest lymph nodes",
+      "group": "Imaging & tests",
+      "points": 3,
+      "pct_sarcoidosis": 0.5,
+      "pct_other": 0.8
+    },
+    {
+      "id": "imaging_lung_nodules_infiltrates",
+      "label": "Imaging: lung nodules / infiltrates",
+      "group": "Imaging & tests",
+      "points": 1,
+      "pct_sarcoidosis": 0.556,
+      "pct_other": 0.75
+    },
+    {
+      "id": "heart_tests_abnormal_ecg_echo_mri",
+      "label": "Heart tests abnormal (ECG / echo / MRI)",
+      "group": "Imaging & tests",
+      "points": 1,
+      "pct_sarcoidosis": 1.0,
+      "pct_other": 1.0
+    },
+    {
+      "id": "liver_tests_abnormal",
+      "label": "Liver tests abnormal",
+      "group": "Imaging & tests",
+      "points": 1,
+      "pct_sarcoidosis": 1.0,
+      "pct_other": null
+    }
+  ],
+  "labs": [
+    {
+      "id": "ace",
+      "label": "ACE",
+      "unit": "U/L",
+      "low": 8,
+      "high": 52,
+      "direction": "high",
+      "max_points": 5
+    },
+    {
+      "id": "serum_calcium",
+      "label": "Serum calcium",
+      "unit": "mg/dL",
+      "low": 8.5,
+      "high": 10.5,
+      "direction": "high",
+      "max_points": 4
+    },
+    {
+      "id": "lymphocyte_count",
+      "label": "Lymphocyte count",
+      "unit": "x10^3/uL",
+      "low": 1.0,
+      "high": 4.8,
+      "direction": "low",
+      "max_points": 2
+    },
+    {
+      "id": "alp",
+      "label": "ALP",
+      "unit": "U/L",
+      "low": 44,
+      "high": 147,
+      "direction": "high",
+      "max_points": 2
+    },
+    {
+      "id": "crp",
+      "label": "CRP",
+      "unit": "mg/L",
+      "low": 0,
+      "high": 5,
+      "direction": "high",
+      "max_points": 1
+    },
+    {
+      "id": "esr",
+      "label": "ESR",
+      "unit": "mm/hr",
+      "low": 0,
+      "high": 20,
+      "direction": "high",
+      "max_points": 1
+    },
+    {
+      "id": "ldh",
+      "label": "LDH",
+      "unit": "U/L",
+      "low": 140,
+      "high": 280,
+      "direction": "high",
+      "max_points": 1
+    },
+    {
+      "id": "wbc",
+      "label": "WBC",
+      "unit": "x10^3/uL",
+      "low": 4.0,
+      "high": 11.0,
+      "direction": "high",
+      "max_points": 1
+    }
+  ],
+  "stats": {
+    "total_cases": 30,
+    "sarcoidosis_cases": 19,
+    "other_cases": 11,
+    "lookalike_diseases": [
+      "Biclonal Lymphoma",
+      "Biventricular Arrhythmogenic Cardiomyopathy (AC)",
+      "Cat Scratch Disease",
+      "Genetic Dilated Cardiomyopathy",
+      "Hodgkin’s lymphoma",
+      "pulmonary tuberculosis",
+      "Tularemia",
+      "Whipple’s Disease"
+    ],
+    "avg_age": 51.0,
+    "age_min": 0.75,
+    "age_max": 85.0,
+    "age_groups": {
+      "Under 18": 1,
+      "18-39": 3,
+      "40-59": 8,
+      "60+": 6
+    },
+    "female": 14,
+    "male": 5,
+    "diagnostic_time_months": {
+      "avg": 18.4,
+      "median": 6.0,
+      "max": 156.0,
+      "values": [
+        1.0,
+        2.0,
+        2.0,
+        2.0,
+        4.0,
+        5.0,
+        6.0,
+        6.0,
+        6.0,
+        8.0,
+        12.0,
+        12.0,
+        36.0,
+        156.0
+      ]
+    },
+    "most_frequent": [
+      {
+        "label": "Fever / fatigue",
+        "count": 8,
+        "out_of": 19
+      },
+      {
+        "label": "Joint / back pain",
+        "count": 7,
+        "out_of": 19
+      },
+      {
+        "label": "Shortness of breath",
+        "count": 6,
+        "out_of": 19
+      },
+      {
+        "label": "Skin lesions / itching",
+        "count": 6,
+        "out_of": 19
+      },
+      {
+        "label": "Abdominal pain",
+        "count": 5,
+        "out_of": 19
+      },
+      {
+        "label": "Imaging: enlarged chest lymph nodes",
+        "count": 5,
+        "out_of": 19
+      },
+      {
+        "label": "Imaging: lung nodules / infiltrates",
+        "count": 5,
+        "out_of": 19
+      },
+      {
+        "label": "Nausea / vomiting",
+        "count": 4,
+        "out_of": 19
+      },
+      {
+        "label": "Dry cough",
+        "count": 4,
+        "out_of": 19
+      },
+      {
+        "label": "Weight loss",
+        "count": 3,
+        "out_of": 19
+      },
+      {
+        "label": "Jaundice",
+        "count": 3,
+        "out_of": 19
+      },
+      {
+        "label": "Palpitations / heart block",
+        "count": 3,
+        "out_of": 19
+      },
+      {
+        "label": "Heart tests abnormal (ECG / echo / MRI)",
+        "count": 3,
+        "out_of": 19
+      },
+      {
+        "label": "Night sweats",
+        "count": 2,
+        "out_of": 19
+      },
+      {
+        "label": "Chronic diarrhea",
+        "count": 1,
+        "out_of": 19
+      },
+      {
+        "label": "Enlarged spleen",
+        "count": 1,
+        "out_of": 19
+      },
+      {
+        "label": "Enlarged lymph nodes",
+        "count": 1,
+        "out_of": 19
+      },
+      {
+        "label": "Blocked nose",
+        "count": 1,
+        "out_of": 19
+      },
+      {
+        "label": "Oral ulcers",
+        "count": 1,
+        "out_of": 19
+      },
+      {
+        "label": "Liver tests abnormal",
+        "count": 1,
+        "out_of": 19
+      },
+      {
+        "label": "Enlarged liver",
+        "count": 0,
+        "out_of": 19
+      },
+      {
+        "label": "Nerve pain / numbness",
+        "count": 0,
+        "out_of": 19
+      },
+      {
+        "label": "Muscle pain",
+        "count": 0,
+        "out_of": 19
+      }
+    ]
+  },
+  "test_vectors": [
+    {
+      "input": {
+        "symptoms": [],
+        "labs": {}
+      },
+      "expected_total": 0,
+      "expected_probability_pct": 10
+    },
+    {
+      "input": {
+        "symptoms": [
+          "imaging_enlarged_chest_lymph_nodes",
+          "dry_cough",
+          "skin_lesions_itching",
+          "joint_back_pain"
+        ],
+        "labs": {}
+      },
+      "expected_total": 9,
+      "expected_probability_pct": 72
+    },
+    {
+      "input": {
+        "symptoms": [
+          "night_sweats",
+          "weight_loss"
+        ],
+        "labs": {}
+      },
+      "expected_total": -3,
+      "expected_probability_pct": 4
+    },
+    {
+      "input": {
+        "symptoms": [
+          "imaging_enlarged_chest_lymph_nodes",
+          "dry_cough",
+          "skin_lesions_itching"
+        ],
+        "labs": {
+          "ace": 110
+        }
+      },
+      "expected_total": 12,
+      "expected_probability_pct": 88
+    },
+    {
+      "input": {
+        "symptoms": [
+          "fever_fatigue"
+        ],
+        "labs": {
+          "ace": 60,
+          "serum_calcium": 11.2,
+          "crp": 4
+        }
+      },
+      "expected_total": 2,
+      "expected_probability_pct": 18
+    },
+    {
+      "input": {
+        "symptoms": [
+          "shortness_of_breath"
+        ],
+        "labs": {
+          "lymphocyte_count": 0.6,
+          "ldh": 300
+        }
+      },
+      "expected_total": 2,
+      "expected_probability_pct": 18
+    }
+  ],
+  "disclaimer": "Research prototype for a student competition. It estimates a likelihood and does not diagnose. Always confirm with a specialist and biopsy.",
+  "next_step_text": "Suggested next step: rule out TB and lymphoma, then refer for chest CT and biopsy."
+}
+

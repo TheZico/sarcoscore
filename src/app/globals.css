@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 44 26% 96%;
+  --foreground: 174 22% 12%;
+  --primary: 158 30% 27%;
+  --primary-hover: 158 32% 21%;
+  --primary-foreground: 44 26% 97%;
+  --muted-foreground: 174 6% 45%;
+  --border: 42 16% 87%;
+  --card: 44 28% 92%;
+  --font-petrona: "Petrona", Georgia, serif;
+  --font-inter: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  font-size: 17px;
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, .font-serif-heading {
+  font-family: var(--font-petrona), Georgia, serif;
+}
+
+/* Subtle 1px sage underline animation on links */
+.sage-link {
+  position: relative;
+  text-decoration: none;
+}
+
+.sage-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 100%;
+  height: 1px;
+  background-color: hsl(var(--primary));
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.sage-link:hover::after {
+  opacity: 1;
+}
+
+/* Print stylesheet for /check clinical summary */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    font-size: 12pt !important;
+    line-height: 1.4 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .print-break-inside-avoid {
+    break-inside: avoid;
+  }
+}
