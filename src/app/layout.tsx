@@ -4,9 +4,9 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "SarcoScore · Clinical Sarcoidosis Likelihood Platform for Doctors",
+  title: "SarcoScore · Clinical Sarcoidosis Likelihood Calculator",
   description:
-    "Helping medical doctors suspect sarcoidosis earlier. Evaluate patient symptoms and laboratory findings to see transparent, AI-assisted likelihood predictions.",
+    "Helping medical doctors suspect sarcoidosis earlier. Evaluate patient symptoms and laboratory findings with a transparent points-based scoring model.",
 };
 
 export default function RootLayout({

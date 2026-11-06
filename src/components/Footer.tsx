@@ -62,22 +62,17 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-white transition-colors">
-                  Doctor Login [Placeholder]
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-white transition-colors">
-                  Request a Demo [Placeholder]
-                </a>
+                <Link href="/method#planned-platform" className="hover:text-white transition-colors">
+                  Planned Next Stage
+                </Link>
               </li>
             </ul>
           </div>
 
-          {/* Column 3: Company & Competition */}
+          {/* Column 3: Project & Team */}
           <div>
             <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#A8C9B9] mb-4">
-              Company & Team
+              Project & Team
             </h3>
             <ul className="space-y-2.5 text-[14px] text-[#F5F2EA]/80">
               <li>
@@ -86,48 +81,33 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/#security" className="hover:text-white transition-colors">
-                  Security & Privacy
+                <Link href="/method" className="hover:text-white transition-colors">
+                  Points-Based Scoring Model
                 </Link>
               </li>
               <li>
-                <Link href="/#faq" className="hover:text-white transition-colors">
-                  Frequently Asked Questions
+                <Link href="/insights" className="hover:text-white transition-colors">
+                  Case Cohort Analysis
                 </Link>
-              </li>
-              <li>
-                <a href="#" className="hover:text-white transition-colors">
-                  [Competition Name Placeholder]
-                </a>
               </li>
             </ul>
           </div>
 
-          {/* Column 4: Legal & Contact */}
+          {/* Column 4: Scope & Limitations */}
           <div>
             <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#A8C9B9] mb-4">
-              Legal & Contact
+              Scope & Limitations
             </h3>
             <ul className="space-y-2.5 text-[14px] text-[#F5F2EA]/80">
               <li>
                 <Link href="/method#limitations" className="hover:text-white transition-colors">
-                  Clinical Limitations
+                  Prototype Limitations
                 </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-white transition-colors">
-                  Privacy Policy [Placeholder]
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-white transition-colors">
-                  Terms of Use [Placeholder]
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-white transition-colors">
-                  Contact: [Placeholder Email]
-                </a>
+                <Link href="/method#planned-platform" className="hover:text-white transition-colors">
+                  Planned Platform Scope
+                </Link>
               </li>
             </ul>
           </div>
@@ -135,9 +115,9 @@ export function Footer() {
 
         {/* Bottom Copyright & General Information Disclaimer */}
         <div className="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-[13px] text-[#F5F2EA]/65">
-          <div>(c) 2026 SarcoScore ([Product Name] · Medical Platform). All rights reserved.</div>
+          <div>(c) 2026 SarcoScore · Student Research Prototype.</div>
           <div className="max-w-xl md:text-right">
-            This website provides general information. AI results are decision support only and are not medical advice.
+            This website provides general information. Score results from the points-based scoring model are decision support only and are not medical advice.
           </div>
         </div>
       </div>
