@@ -205,8 +205,7 @@ export function ResultCard({
       <div className="mt-4 flex items-center gap-2 text-[12px] text-muted-foreground">
         <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary" />
         <span>
-          Decision support for the doctor. Not a diagnosis. No data leaves your
-          browser.
+          Decision support only. Confirm with a specialist and biopsy.
         </span>
       </div>
     </div>

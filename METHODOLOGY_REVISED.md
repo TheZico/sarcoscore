@@ -136,3 +136,4 @@ As illustrated in **Fig. (9)**, the three pillars of the project fit together li
 
 > **[Insert Fig. (9): Camera Analogy Diagram]**
 > *Fig. (9): Graphical summary connecting Research (the scene), the Points-Based Scoring Model (the lens), and the Clinical Platform (the photograph).*
+

@@ -1,36 +1,47 @@
-# SarcoScore — Clinical Sarcoidosis Likelihood Platform
+# SarcoScore — Sarcoidosis Clinical Decision Support Platform
 
-A calm, trustworthy clinical web platform built for medical doctors to evaluate patient symptoms and laboratory findings, compute a transparent sarcoidosis likelihood percentage, and explore published case dataset insights.
+A clinical web platform built for medical doctors, researchers, administrators, and patients to evaluate sarcoidosis likelihood from symptoms and laboratory test results, manage clinical visits, review research cohorts, and administer scoring rules.
 
-## Architecture & Tech Stack
+> **Demo Data Only:** All patient records, 14-digit Egyptian National IDs, and clinical visits are synthetic demo data. Never enter or store real patient data.
+
+## Tech Stack
 
 - **Framework:** Next.js 15 (App Router) + React 19 + TypeScript
-- **Styling & Design System:** Tailwind CSS, warm bone (`hsl(44, 26%, 96%)`) & muted sage (`hsl(158, 26%, 36%)`) clinical palette, Google Fonts (`Petrona` serif headings + `Inter` body/eyebrows)
-- **Motion & UI:** Framer Motion (`framer-motion` / `motion`), Radix UI Accordion (`@radix-ui/react-accordion`), `lucide-react`
-- **Charts:** Recharts (`recharts`)
-- **Scoring & Unit Tests:** Pure browser-side TypeScript in `src/lib/scoring.ts` verified with Vitest (`src/lib/scoring.test.ts`) against all `test_vectors` in `src/data/model.json`
+- **Styling:** Tailwind CSS, warm bone (`hsl(44, 26%, 96%)`) & dark sage (`hsl(158, 30%, 27%)`) clinical aesthetic, `Petrona` serif headings + `Inter` 17px body
+- **Charts & Motion:** Recharts (`recharts`), Framer Motion (`framer-motion` 0.75s fade-up), `lucide-react`
+- **Database & Security:** Supabase schema + Row Level Security (`supabase/schema.sql`) and programmatic RLS enforcement (`src/lib/rls.ts`, `src/lib/db.ts`) verified with Vitest (`src/lib/rls.test.ts`, `src/lib/scoring.test.ts`)
 
-## Pages
+## Demo Accounts (One Per Role)
 
-1. **`/` (Home):** Split hero with read-only example result card from `model.test_vectors[1]`, 3 clinical problem stat cards from `model.json`, 3-step How It Works overview, and Student Competition Team section.
-2. **`/check` (Check a Patient):** Interactive client-side clinical checker with symptoms grouped by body system (`General`, `Chest`, `Skin, nose & mouth`, `Abdomen`, `Other`, `Imaging & tests`), optional quantitative laboratory inputs with normal range hints, sample preset loaders, live sticky `ResultCard`, and one-click `Print / Save as PDF`.
-3. **`/insights` (What the Data Shows):** Recharts visualizations built dynamically from `model.stats` and `model.features` (Top 10 Most Frequent Findings, Points per Finding sorted horizontally, Age Groups, Time to Diagnosis per patient with dashed median reference line, and full prevalence comparison table).
-4. **`/method` (How It Works):** Plain-language guide to the **points-based scoring model**: where the data comes from, how the data is organized, points for findings, points for labs, from points to %, full lab reference table, the 3-part camera analogy graphic, planned next-stage platform card, and prototype limitations.
+Sign in at **`/login`** (password for all accounts: `demo1234`):
 
-## Local Development & Testing
+| Role | Email | Home Route | Accessible Modules |
+| :--- | :--- | :--- | :--- |
+| **Administrator** | `admin@sarcoscore.demo` | `/dashboard` | Dashboard, Create & Review, Patient Profile, Research & Insights, System Management |
+| **Doctor** | `doctor@sarcoscore.demo` | `/dashboard` | Dashboard, Create & Review, Patient Profile |
+| **Researcher** | `researcher@sarcoscore.demo` | `/research` | Research & Insights |
+| **Patient** | `patient@sarcoscore.demo` | `/my-health` | My Health (own scan & test results only) |
+
+## Modules & Routes
+
+1. **`/` (Public Home):** Hero (*"Helping doctors suspect sarcoidosis earlier"*), Login CTA, 3-part Camera Analogy graphic (*Research = Scene*, *Model = Lens*, *Platform = Photograph*), and PubMed/Google Scholar 30-case dataset overview.
+2. **`/login` (Authentication & RLS Matrix):** Email + password login, 1-click demo role switcher, and live Row Level Security permission matrix.
+3. **`/dashboard` (Dashboard — Doctor, Admin):** Search patients by name, 14-digit National ID, or Patient ID; High-risk alerts (`High` likelihood ≥60%); Recently opened files; and filterable Latest Patient Files.
+4. **`/cases/new` (Create & Review — Doctor, Admin):** Two tabs for **New Patient File** (14-digit National ID validated) and **Temporary File** (no National ID), opening directly into the clinical visit scorer.
+5. **`/patients/[id]` (Patient Profile — Doctor, Admin):** Editable personal info, medical history summary, doctor-recorded diagnosis, current symptoms & latest investigations/labs, interactive **"Add clinical visit"** scorer, Recharts longitudinal score trajectory chart, and visit-to-visit comparison table.
+6. **`/research` (Research & Insights — Researcher, Admin):** Two tabs for **Model & Insights** (Excel/PDF case upload into the isolated `pending` review queue + frequent symptoms and examinations charts) and **Patient Case Page** (de-identified research table + CSV export).
+7. **`/admin` (System Management — Admin only):** Five sections: User accounts & roles, Medical lists (Investigations, Symptoms + points, Diagnoses, Specialties), Scoring & lab ranges, Review latest 200 changes (`audit_log`), and Backup & restore with confirmation step.
+8. **`/my-health` (My Health — Patient only):** Read-only personal scan and laboratory test results with dates, isolated by Row Level Security to the signed-in patient's own record (`PT-2026-001`).
+
+## Commands
 
 ```bash
-# Run unit tests against model.json test vectors
+# Run Vitest unit tests (scoring test_vectors + Row Level Security)
 npm test
 
-# Start local development server
+# Start development server
 npm run dev
 
-# Build static production bundle
+# Build production bundle
 npm run build
 ```
-
-## Updating the Model (`model.json`)
-
-Whenever cases are added or the scoring model output is regenerated, replace `src/data/model.json` and run `npm test` to verify all test vectors pass. Every page, chart, and scoring calculation reads directly from `src/data/model.json`.
-

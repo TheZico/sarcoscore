@@ -32,12 +32,9 @@ export function Footer() {
                 SarcoScore
               </span>
             </div>
-            <p className="text-[14px] leading-relaxed text-[#F5F2EA]/70 mb-4">
+            <p className="text-[14px] leading-relaxed text-[#F5F2EA]/70">
               Helping medical doctors suspect sarcoidosis earlier through structured symptom and laboratory likelihood scoring.
             </p>
-            <div className="text-[12px] text-[#A8C9B9]">
-              Model version: <span className="font-mono">{model.version}</span>
-            </div>
           </div>
 
           {/* Column 2: Product Links */}

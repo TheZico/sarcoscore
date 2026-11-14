@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { AuthProvider } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "SarcoScore · Clinical Sarcoidosis Likelihood Calculator",
+  title: "SarcoScore · Sarcoidosis Clinical Decision Support Platform",
   description:
-    "Helping medical doctors suspect sarcoidosis earlier. Evaluate patient symptoms and laboratory findings with a transparent points-based scoring model.",
+    "Helping doctors suspect sarcoidosis earlier. Evaluate patient symptoms and laboratory findings with a transparent points-based scoring model.",
 };
 
 export default function RootLayout({
@@ -29,11 +30,12 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col bg-background text-foreground selection:bg-primary/20 selection:text-foreground">
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <AuthProvider>
+          <Navbar />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );
 }
-

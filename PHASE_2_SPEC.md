@@ -95,3 +95,4 @@ Store `model_version` on every visit so old scores stay explainable after the mo
 2. Who approves imported cases and admin scoring changes (Hazem)?
 3. Is patient "My Health" needed? What exactly do patients see?
 4. Is Excel-only import acceptable for the first version?
+
