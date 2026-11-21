@@ -41,25 +41,10 @@ create table if not exists public.patients (
   created_at timestamptz not null default now()
 );
 
--- 3. TEMPORARY PATIENT FILES (no national ID)
-create table if not exists public.temp_patients (
-  id uuid primary key default gen_random_uuid(),
-  patient_code text unique not null,
-  label text not null,
-  gender text not null check (gender in ('Female', 'Male')),
-  age integer not null check (age >= 0 and age <= 120),
-  notes text not null default '',
-  recorded_diagnosis text not null default 'Temporary evaluation',
-  created_by uuid references public.profiles(id) on delete set null,
-  last_opened_at timestamptz not null default now(),
-  created_at timestamptz not null default now()
-);
-
--- 4. CLINICAL VISITS (stores symptoms jsonb, labs jsonb, score & model_version)
+-- 3. CLINICAL VISITS (stores symptoms jsonb, labs jsonb, score & model_version)
 create table if not exists public.visits (
   id uuid primary key default gen_random_uuid(),
-  patient_id uuid references public.patients(id) on delete cascade,
-  temp_patient_id uuid references public.temp_patients(id) on delete cascade,
+  patient_id uuid not null references public.patients(id) on delete cascade,
   doctor_id uuid references public.profiles(id) on delete set null,
   doctor_name text not null default 'Dr. Clinical Evaluator',
   date timestamptz not null default now(),
@@ -70,11 +55,7 @@ create table if not exists public.visits (
   total integer not null,
   probability numeric(5,4) not null,
   level text not null check (level in ('Low', 'Moderate', 'High')),
-  model_version text not null,
-  check (
-    (patient_id is not null and temp_patient_id is null) or
-    (patient_id is null and temp_patient_id is not null)
-  )
+  model_version text not null
 );
 
 -- 5. MEDICAL LISTS (Investigations, Symptoms with points, Diagnoses, Specialties)
@@ -142,7 +123,6 @@ create table if not exists public.audit_log (
 
 alter table public.profiles enable row level security;
 alter table public.patients enable row level security;
-alter table public.temp_patients enable row level security;
 alter table public.visits enable row level security;
 alter table public.medical_lists enable row level security;
 alter table public.lab_ranges enable row level security;
@@ -167,11 +147,6 @@ create policy "patients_patient_read_own" on public.patients
   for select using (
     public.current_user_role() = 'patient' and patient_user_id = auth.uid()
   );
-
--- TEMP PATIENTS: Doctor & Admin only
-create policy "temp_patients_doctor_admin_all" on public.temp_patients
-  for all using (public.current_user_role() in ('admin', 'doctor'))
-  with check (public.current_user_role() in ('admin', 'doctor'));
 
 -- VISITS: Doctor & Admin full access; Researcher read-only de-identified stats
 create policy "visits_doctor_admin_all" on public.visits
@@ -200,8 +175,8 @@ create policy "imported_cases_researcher_admin_read" on public.imported_cases
 create policy "imported_cases_researcher_admin_insert" on public.imported_cases
   for insert with check (public.current_user_role() in ('admin', 'researcher'));
 
-create policy "imported_cases_admin_update" on public.imported_cases
-  for update using (public.current_user_role() = 'admin');
+create policy "imported_cases_researcher_admin_update" on public.imported_cases
+  for update using (public.current_user_role() in ('admin', 'researcher'));
 
 -- PATIENT RESULTS (My Health): Patient reads ONLY own rows; Doctor & Admin can read/insert
 create policy "patient_results_patient_own_only" on public.patient_results

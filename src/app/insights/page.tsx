@@ -3,6 +3,8 @@
 import React from "react";
 import { motion } from "framer-motion";
 import model from "@/data/model.json";
+import { useAuth } from "@/lib/auth";
+import { canUseQuickCalculator } from "@/lib/rls";
 import {
   MostFrequentChart,
   PointsPerFindingChart,
@@ -33,6 +35,7 @@ function formatPct(val: number | null): string {
 }
 
 export default function InsightsPage() {
+  const { user } = useAuth();
   const { stats, features } = model;
 
   return (
@@ -53,13 +56,23 @@ export default function InsightsPage() {
               sarcoidosis presentations against look-alike diseases.
             </p>
           </div>
-          <Link
-            href="/check"
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary px-5 py-3 text-[15px] font-medium text-primary-foreground transition-colors hover:bg-primary-hover"
-          >
-            <span>Check a Patient</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          {canUseQuickCalculator(user) ? (
+            <Link
+              href="/check"
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary px-5 py-3 text-[15px] font-medium text-primary-foreground transition-colors hover:bg-primary-hover"
+            >
+              <span>Check a Patient</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          ) : !user ? (
+            <Link
+              href="/login"
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary px-5 py-3 text-[15px] font-medium text-primary-foreground transition-colors hover:bg-primary-hover"
+            >
+              <span>Login to Platform</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          ) : null}
         </div>
       </motion.div>
 

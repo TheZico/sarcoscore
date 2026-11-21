@@ -25,6 +25,20 @@ interface AuthContextValue {
 }
 
 const SESSION_ID_KEY = "sarcoscore_uid";
+const ROLE_COOKIE_NAME = "sarcoscore_role";
+
+function syncRoleCookie(role: string | null) {
+  if (typeof document === "undefined") return;
+  const secureFlag =
+    typeof window !== "undefined" && window.location.protocol === "https:"
+      ? "; Secure"
+      : "";
+  if (!role) {
+    document.cookie = `${ROLE_COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax${secureFlag}`;
+  } else {
+    document.cookie = `${ROLE_COOKIE_NAME}=${encodeURIComponent(role)}; path=/; SameSite=Lax${secureFlag}`;
+  }
+}
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -48,7 +62,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             role: found.role,
             linkedPatientId: found.linkedPatientId,
           });
+          syncRoleCookie(found.role);
+        } else {
+          syncRoleCookie(null);
         }
+      } else {
+        syncRoleCookie(null);
       }
     } catch {
       // ignore storage errors
@@ -63,6 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(authenticated);
       try {
         window.sessionStorage.setItem(SESSION_ID_KEY, authenticated.id);
+        syncRoleCookie(authenticated.role);
       } catch {
         // ignore
       }
@@ -76,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     try {
       window.sessionStorage.removeItem(SESSION_ID_KEY);
+      syncRoleCookie(null);
     } catch {
       // ignore
     }

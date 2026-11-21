@@ -126,6 +126,38 @@ export function assertPatientOwnRecord(
 }
 
 /**
+ * Quick Calculator (/check) access policy:
+ * Requires an active authenticated session as Admin, Doctor, or Researcher.
+ * - Logged-out visitors (no session) are blocked and redirected to /login.
+ * - Patient accounts are blocked and redirected to /my-health.
+ */
+export function canUseQuickCalculator(
+  user: SessionUser | null | undefined
+): boolean {
+  if (!user) return false;
+  return (
+    user.role === "admin" ||
+    user.role === "doctor" ||
+    user.role === "researcher"
+  );
+}
+
+export function assertQuickCalculatorAccess(
+  user: SessionUser | null | undefined
+): void {
+  if (!user) {
+    throw new RLSViolationError(
+      "RLS denied: Quick Calculator requires login; redirect to /login."
+    );
+  }
+  if (user.role === "patient") {
+    throw new RLSViolationError(
+      "RLS denied: Patient accounts cannot access Quick Calculator; redirect to /my-health."
+    );
+  }
+}
+
+/**
  * Validates Egyptian National ID format (exactly 14 digits).
  */
 export function isValidNationalId(nationalId: string): boolean {

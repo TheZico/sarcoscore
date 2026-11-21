@@ -75,30 +75,106 @@ export function validatePatientCreateInput(input: {
   return { fullName, nationalId, gender: input.gender, dob, phone, historySummary };
 }
 
-export function validateTempPatientCreateInput(input: {
-  label: string;
-  gender: "Female" | "Male";
-  age: number;
-  notes: string;
+/**
+ * Neutralizes spreadsheet/CSV formula injection (values starting with =, +, -, or @)
+ * so Excel/CSV never executes cell values as formulas. Instead they are stored as plain text.
+ */
+export function neutralizeFormulaInjection(raw: string): string {
+  const trimmed = raw.trim();
+  if (/^[=+\-@]/.test(trimmed)) {
+    return `'${trimmed}`;
+  }
+  return trimmed;
+}
+
+export function validateManualResearchCaseInput(input: {
+  caseCode: string;
+  age: number | string;
+  diagnosticTimeMonths: number | string;
+  confirmedDisease: string;
+  gender?: "Female" | "Male";
+  symptoms: string[];
+  testValues: Record<string, string | number | undefined> | string;
 }) {
-  const label = sanitizeText(input.label, 120);
-  if (label.length < 2) {
+  const caseCode = neutralizeFormulaInjection(
+    sanitizeText(String(input.caseCode ?? ""), 40)
+  );
+  if (caseCode.length < 2) {
     throw new ValidationError(
-      "Temporary file label must be between 2 and 120 characters."
+      "Case number is required (2 to 40 characters)."
     );
   }
-  if (input.gender !== "Female" && input.gender !== "Male") {
-    throw new ValidationError("Gender must be 'Female' or 'Male'.");
-  }
+
   const age = Number(input.age);
   if (!Number.isFinite(age) || age < 0 || age > 120) {
     throw new ValidationError("Age must be a valid number between 0 and 120.");
   }
-  const notes = sanitizeText(input.notes, 2000);
-  if (!notes) {
-    throw new ValidationError("Medical notes are required.");
+
+  const diagnosticTimeMonths = Number(input.diagnosticTimeMonths);
+  if (
+    !Number.isFinite(diagnosticTimeMonths) ||
+    diagnosticTimeMonths < 0 ||
+    diagnosticTimeMonths > 600
+  ) {
+    throw new ValidationError(
+      "Diagnostic time (months) must be a valid number between 0 and 600."
+    );
   }
-  return { label, gender: input.gender, age: Math.round(age), notes };
+
+  const confirmedDisease = neutralizeFormulaInjection(
+    sanitizeText(String(input.confirmedDisease ?? ""), 160)
+  );
+  if (confirmedDisease.length < 2) {
+    throw new ValidationError("Final confirmed disease is required.");
+  }
+
+  if (!Array.isArray(input.symptoms)) {
+    throw new ValidationError("Symptoms must be a list of finding codes.");
+  }
+  const symptoms = Array.from(
+    new Set(
+      input.symptoms
+        .map((s) => sanitizeText(String(s), 80))
+        .filter((s) => s.length > 0)
+    )
+  );
+
+  const normalizedTests: Record<string, string> = {};
+  const summaryParts: string[] = [];
+
+  if (typeof input.testValues === "string") {
+    const cleaned = neutralizeFormulaInjection(
+      sanitizeText(input.testValues, 1000)
+    );
+    if (cleaned) {
+      normalizedTests["summary"] = cleaned;
+      summaryParts.push(cleaned);
+    }
+  } else if (input.testValues && typeof input.testValues === "object") {
+    for (const [k, rawVal] of Object.entries(input.testValues)) {
+      if (rawVal === undefined || rawVal === null) continue;
+      const key = neutralizeFormulaInjection(sanitizeText(String(k), 80));
+      const val = neutralizeFormulaInjection(sanitizeText(String(rawVal), 200));
+      if (key && val) {
+        normalizedTests[key] = val;
+        summaryParts.push(`${key}: ${val}`);
+      }
+    }
+  }
+
+  const investigationsSummary =
+    summaryParts.length > 0 ? summaryParts.join(", ") : "Manual entry";
+
+  return {
+    caseCode,
+    age: Math.round(age),
+    diagnosticTimeMonths: Math.round(diagnosticTimeMonths),
+    confirmedDisease,
+    gender: input.gender === "Male" ? ("Male" as const) : ("Female" as const),
+    symptoms,
+    testValues: normalizedTests,
+    investigationsSummary,
+  };
 }
 
 export const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB

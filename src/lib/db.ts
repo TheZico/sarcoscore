@@ -1,7 +1,6 @@
 import {
   DEMO_USERS,
   SEED_PATIENTS,
-  SEED_TEMP_PATIENTS,
   SEED_VISITS,
   SEED_MEDICAL_LISTS,
   SEED_LAB_RANGES,
@@ -10,7 +9,6 @@ import {
   SEED_AUDIT_LOG,
   DemoUserAccount,
   PatientRecord,
-  TempPatientRecord,
   VisitRecord,
   MedicalListItem,
   LabRangeItem,
@@ -29,8 +27,9 @@ import {
 import {
   ValidationError,
   sanitizeText,
+  neutralizeFormulaInjection,
   validatePatientCreateInput,
-  validateTempPatientCreateInput,
+  validateManualResearchCaseInput,
   validateResearchUploadFile,
 } from "@/lib/validation";
 import { checkRateLimit, resetRateLimiter } from "@/lib/security";
@@ -40,7 +39,6 @@ import model from "@/data/model.json";
 export interface DatabaseState {
   users: DemoUserAccount[];
   patients: PatientRecord[];
-  tempPatients: TempPatientRecord[];
   visits: VisitRecord[];
   medicalLists: MedicalListItem[];
   labRanges: LabRangeItem[];
@@ -54,7 +52,6 @@ function cloneInitialState(): DatabaseState {
     JSON.stringify({
       users: DEMO_USERS,
       patients: SEED_PATIENTS,
-      tempPatients: SEED_TEMP_PATIENTS,
       visits: SEED_VISITS,
       medicalLists: SEED_MEDICAL_LISTS,
       labRanges: SEED_LAB_RANGES,
@@ -255,16 +252,6 @@ export function listPatientsForDashboard(
   );
 }
 
-export function listTempPatientsForDashboard(
-  user: SessionUser | null
-): TempPatientRecord[] {
-  verifyServerAccess(user, "dashboard");
-  const db = loadDb();
-  return [...db.tempPatients].sort((a, b) =>
-    b.createdAt.localeCompare(a.createdAt)
-  );
-}
-
 export function getPatientRecordById(
   user: SessionUser | null,
   patientId: string
@@ -272,15 +259,6 @@ export function getPatientRecordById(
   verifyServerAccess(user, "patient_profile");
   const db = loadDb();
   return db.patients.find((p) => p.id === patientId);
-}
-
-export function getTempPatientRecordById(
-  user: SessionUser | null,
-  tempId: string
-): TempPatientRecord | undefined {
-  verifyServerAccess(user, "patient_profile");
-  const db = loadDb();
-  return db.tempPatients.find((t) => t.id === tempId);
 }
 
 export function recordPatientFileOpened(
@@ -295,13 +273,6 @@ export function recordPatientFileOpened(
     pat.lastOpenedAt = now;
     appendAudit(db, verified, "OPEN_PATIENT_FILE", `Opened ${pat.patientCode}`);
     saveDb(db);
-    return;
-  }
-  const tmp = db.tempPatients.find((t) => t.id === id);
-  if (tmp) {
-    tmp.lastOpenedAt = now;
-    appendAudit(db, verified, "OPEN_TEMP_FILE", `Opened ${tmp.patientCode}`);
-    saveDb(db);
   }
 }
 
@@ -312,7 +283,7 @@ export function listVisitsForPatient(
   verifyServerAccess(user, "patient_profile");
   const db = loadDb();
   return db.visits
-    .filter((v) => v.patientId === patientId || v.tempPatientId === patientId)
+    .filter((v) => v.patientId === patientId)
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
@@ -371,43 +342,6 @@ export function createPatientFile(
   return record;
 }
 
-export function createTemporaryPatientFile(
-  user: SessionUser | null,
-  input: {
-    label: string;
-    gender: "Female" | "Male";
-    age: number;
-    notes: string;
-  }
-): TempPatientRecord {
-  const verified = verifyServerAccess(user, "create_review");
-  const clean = validateTempPatientCreateInput(input);
-  const db = loadDb();
-  const nextNum = db.tempPatients.length + 1;
-  const now = new Date().toISOString();
-  const record: TempPatientRecord = {
-    id: `tmp-${2000 + nextNum}-${Date.now().toString(36).slice(-3)}`,
-    patientCode: `TMP-${String(nextNum).padStart(2, "0")}`,
-    label: clean.label,
-    gender: clean.gender,
-    age: clean.age,
-    notes: clean.notes,
-    recordedDiagnosis: "Temporary evaluation",
-    createdBy: verified.id,
-    lastOpenedAt: now,
-    createdAt: now,
-  };
-  db.tempPatients = [record, ...db.tempPatients];
-  appendAudit(
-    db,
-    verified,
-    "CREATE_TEMP_FILE",
-    `Created temporary file ${record.patientCode} (id: ${record.id})`
-  );
-  saveDb(db);
-  return record;
-}
-
 export function updatePatientPersonalAndDiagnosis(
   user: SessionUser | null,
   patientId: string,
@@ -457,56 +391,10 @@ export function updatePatientPersonalAndDiagnosis(
   return pat;
 }
 
-export function updateTempPatientRecord(
-  user: SessionUser | null,
-  tempId: string,
-  updates: Partial<
-    Pick<
-      TempPatientRecord,
-      "label" | "gender" | "age" | "notes" | "recordedDiagnosis"
-    >
-  >
-): TempPatientRecord {
-  const verified = verifyServerAccess(user, "patient_profile");
-  const db = loadDb();
-  const tmp = db.tempPatients.find((t) => t.id === tempId);
-  if (!tmp) {
-    throw new Error("Temporary patient record not found.");
-  }
-  if (updates.label !== undefined) {
-    tmp.label = sanitizeText(updates.label, 120);
-  }
-  if (updates.gender === "Female" || updates.gender === "Male") {
-    tmp.gender = updates.gender;
-  }
-  if (updates.age !== undefined) {
-    const a = Number(updates.age);
-    if (!Number.isFinite(a) || a < 0 || a > 120) {
-      throw new ValidationError("Age must be between 0 and 120.");
-    }
-    tmp.age = Math.round(a);
-  }
-  if (updates.notes !== undefined) {
-    tmp.notes = sanitizeText(updates.notes, 2000);
-  }
-  if (updates.recordedDiagnosis !== undefined) {
-    tmp.recordedDiagnosis = sanitizeText(updates.recordedDiagnosis, 300);
-  }
-  appendAudit(
-    db,
-    verified,
-    "UPDATE_TEMP_PROFILE",
-    `Updated temporary file ${tmp.patientCode}`
-  );
-  saveDb(db);
-  return tmp;
-}
-
 export function addClinicalVisit(
   user: SessionUser | null,
   input: {
-    patientId?: string;
-    tempPatientId?: string;
+    patientId: string;
     symptoms: string[];
     labs: Record<string, number | undefined>;
     investigations: string[];
@@ -514,6 +402,9 @@ export function addClinicalVisit(
   }
 ): VisitRecord {
   const verified = verifyServerAccess(user, "patient_profile");
+  if (!input.patientId) {
+    throw new ValidationError("Patient ID is required to save a clinical visit.");
+  }
   const db = loadDb();
   const evalResult = score(
     { symptoms: input.symptoms, labs: input.labs },
@@ -531,7 +422,6 @@ export function addClinicalVisit(
   const visit: VisitRecord = {
     id: `vis-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
     patientId: input.patientId,
-    tempPatientId: input.tempPatientId,
     doctorId: verified.id,
     doctorName: verified.fullName,
     date: new Date().toISOString(),
@@ -545,12 +435,11 @@ export function addClinicalVisit(
     modelVersion: model.version,
   };
   db.visits = [...db.visits, visit];
-  const targetLabel = input.patientId ?? input.tempPatientId ?? "unknown";
   appendAudit(
     db,
     verified,
     "ADD_CLINICAL_VISIT",
-    `Saved visit on ${targetLabel}: ${Math.round(visit.probability * 100)}% (${visit.level}, ${visit.total} pts, v${visit.modelVersion})`
+    `Saved visit on ${input.patientId}: ${Math.round(visit.probability * 100)}% (${visit.level}, ${visit.total} pts, v${visit.modelVersion})`
   );
   saveDb(db);
   return visit;
@@ -570,23 +459,28 @@ export function listImportedCases(
   );
 }
 
+/**
+ * Option 1: Add new case by uploading an Excel or PDF file.
+ * Validates file size (<= 5 MB), file extension (.xlsx, .xls, .csv, .pdf), and magic bytes.
+ * Never executes content and saves with status "pending".
+ */
 export function submitImportedResearchCase(
   user: SessionUser | null,
   input: {
     fileName: string;
-    fileType: "Excel" | "PDF";
+    fileType?: "Excel" | "PDF";
     fileSize?: number;
     fileSizeBytes?: number;
     headerBytes?: Uint8Array;
     magicBytes?: Uint8Array;
-    caseCode: string;
-    age: number;
-    gender: "Female" | "Male";
-    source: string;
-    symptoms: string[];
-    investigations: string;
-    confirmedDisease: string;
-    diagnosticTimeMonths: number;
+    caseCode?: string;
+    age?: number;
+    gender?: "Female" | "Male";
+    source?: string;
+    symptoms?: string[];
+    investigations?: string;
+    confirmedDisease?: string;
+    diagnosticTimeMonths?: number;
   }
 ): ImportedCaseRecord {
   const verified = verifyServerAccess(user, "research_insights");
@@ -598,29 +492,49 @@ export function submitImportedResearchCase(
     headerBytes: input.headerBytes ?? input.magicBytes,
   });
 
-  const age = Number(input.age);
+  const db = loadDb();
+  const nextIdx = db.importedCases.length + 31;
+  const age = input.age !== undefined ? Number(input.age) : 45;
   if (!Number.isFinite(age) || age < 0 || age > 120) {
     throw new ValidationError("Case age must be between 0 and 120.");
   }
 
-  const db = loadDb();
   const record: ImportedCaseRecord = {
-    id: `imp-${Date.now()}`,
+    id: `imp-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
     uploadedBy: verified.id,
     uploadedByEmail: verified.email,
+    entryMethod: "upload",
     fileName: validatedFile.sanitizedFileName,
     fileType: validatedFile.detectedType,
     caseSummary: {
-      caseCode: sanitizeText(input.caseCode, 40),
+      caseCode: neutralizeFormulaInjection(
+        sanitizeText(input.caseCode || `LIT-2026-${nextIdx}`, 40)
+      ),
       age: Math.round(age),
       gender: input.gender === "Male" ? "Male" : "Female",
-      source: sanitizeText(input.source, 120),
-      symptoms: Array.from(new Set(input.symptoms)),
-      investigations: sanitizeText(input.investigations, 500),
-      confirmedDisease: sanitizeText(input.confirmedDisease, 160),
+      source: neutralizeFormulaInjection(
+        sanitizeText(
+          input.source || `${validatedFile.detectedType} File Upload`,
+          120
+        )
+      ),
+      symptoms: Array.from(new Set(input.symptoms ?? [])),
+      investigations: neutralizeFormulaInjection(
+        sanitizeText(
+          input.investigations ||
+            `Uploaded file (${validatedFile.sanitizedFileName})`,
+          500
+        )
+      ),
+      confirmedDisease: neutralizeFormulaInjection(
+        sanitizeText(
+          input.confirmedDisease || "Sarcoidosis (File Import)",
+          160
+        )
+      ),
       diagnosticTimeMonths: Math.max(
         0,
-        Math.round(Number(input.diagnosticTimeMonths) || 0)
+        Math.round(Number(input.diagnosticTimeMonths ?? 6) || 0)
       ),
     },
     status: "pending", // Always pending review; never alters live model automatically
@@ -637,12 +551,70 @@ export function submitImportedResearchCase(
   return record;
 }
 
+/**
+ * Option 2: Add new case by entering case fields manually (no file upload required).
+ * Validated on the server via validateManualResearchCaseInput.
+ * Saves with status "pending" and never alters live scoring automatically.
+ */
+export function submitManualResearchCase(
+  user: SessionUser | null,
+  input: {
+    caseCode: string;
+    age: number | string;
+    diagnosticTimeMonths: number | string;
+    confirmedDisease: string;
+    gender?: "Female" | "Male";
+    symptoms: string[];
+    testValues: Record<string, string | number | undefined> | string;
+  }
+): ImportedCaseRecord {
+  const verified = verifyServerAccess(user, "research_insights");
+  checkRateLimit("upload", verified.id, 10, 60_000);
+
+  const clean = validateManualResearchCaseInput(input);
+  const db = loadDb();
+
+  const record: ImportedCaseRecord = {
+    id: `imp-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+    uploadedBy: verified.id,
+    uploadedByEmail: verified.email,
+    entryMethod: "manual",
+    fileName: `Manual Entry (${clean.caseCode})`,
+    fileType: "Manual",
+    caseSummary: {
+      caseCode: clean.caseCode,
+      age: clean.age,
+      gender: clean.gender,
+      source: "Manual Case Entry",
+      symptoms: clean.symptoms,
+      investigations: clean.investigationsSummary,
+      testValues: clean.testValues,
+      confirmedDisease: clean.confirmedDisease,
+      diagnosticTimeMonths: clean.diagnosticTimeMonths,
+    },
+    status: "pending", // Always pending review; never alters live model automatically
+    createdAt: new Date().toISOString(),
+  };
+  db.importedCases = [record, ...db.importedCases];
+  appendAudit(
+    db,
+    verified,
+    "MANUAL_CASE_PENDING",
+    `Entered manual research case ${clean.caseCode} -> status: pending`
+  );
+  saveDb(db);
+  return record;
+}
+
+/**
+ * Only an Admin or Researcher approval moves a pending case forward.
+ */
 export function updateImportedCaseStatus(
   user: SessionUser | null,
   importId: string,
   status: "pending" | "approved" | "rejected"
 ): ImportedCaseRecord {
-  const verified = verifyServerAccess(user, "system_management");
+  const verified = verifyServerAccess(user, "research_insights");
   const db = loadDb();
   const target = db.importedCases.find((c) => c.id === importId);
   if (!target) throw new Error("Imported case not found.");

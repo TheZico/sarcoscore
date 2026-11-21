@@ -28,23 +28,9 @@ export interface PatientRecord {
   createdAt: string;
 }
 
-export interface TempPatientRecord {
-  id: string;
-  patientCode: string;
-  label: string;
-  gender: "Female" | "Male";
-  age: number;
-  notes: string;
-  recordedDiagnosis: string;
-  createdBy: string;
-  lastOpenedAt: string;
-  createdAt: string;
-}
-
 export interface VisitRecord {
   id: string;
-  patientId?: string;
-  tempPatientId?: string;
+  patientId: string;
   doctorId: string;
   doctorName: string;
   date: string;
@@ -83,8 +69,9 @@ export interface ImportedCaseRecord {
   id: string;
   uploadedBy: string;
   uploadedByEmail: string;
+  entryMethod?: "upload" | "manual";
   fileName: string;
-  fileType: "Excel" | "PDF";
+  fileType: "Excel" | "PDF" | "Manual";
   caseSummary: {
     caseCode: string;
     age: number;
@@ -92,6 +79,7 @@ export interface ImportedCaseRecord {
     source: string;
     symptoms: string[];
     investigations: string;
+    testValues?: Record<string, string>;
     confirmedDisease: string;
     diagnosticTimeMonths: number;
   };
@@ -310,39 +298,9 @@ export const SEED_PATIENTS: PatientRecord[] = [
   },
 ];
 
-export const SEED_TEMP_PATIENTS: TempPatientRecord[] = [
-  {
-    id: "tmp-2001",
-    patientCode: "TMP-01",
-    label: "Outpatient Consult #A4 (Unregistered)",
-    gender: "Female",
-    age: 49,
-    notes:
-      "Referred from external clinic with chest X-ray showing hilar enlargement and dry cough; national ID not provided at triage.",
-    recordedDiagnosis: "Pending specialist referral",
-    createdBy: "usr-doctor-01",
-    lastOpenedAt: "2026-11-10T11:00:00Z",
-    createdAt: "2026-11-04T11:00:00Z",
-  },
-  {
-    id: "tmp-2002",
-    patientCode: "TMP-02",
-    label: "Second Opinion Case #B2",
-    gender: "Male",
-    age: 34,
-    notes:
-      "Fever, night sweats, and weight loss; evaluating differential before bronchoscopy.",
-    recordedDiagnosis: "Rule out infectious etiology",
-    createdBy: "usr-doctor-01",
-    lastOpenedAt: "2026-11-08T09:15:00Z",
-    createdAt: "2026-11-05T15:20:00Z",
-  },
-];
-
 function createSeedVisit(params: {
   id: string;
-  patientId?: string;
-  tempPatientId?: string;
+  patientId: string;
   date: string;
   symptoms: string[];
   labs: Record<string, number | undefined>;
@@ -353,7 +311,6 @@ function createSeedVisit(params: {
   return {
     id: params.id,
     patientId: params.patientId,
-    tempPatientId: params.tempPatientId,
     doctorId: "usr-doctor-01",
     doctorName: "Dr. Nadia El-Sayed",
     date: params.date,
@@ -517,16 +474,6 @@ export const SEED_VISITS: VisitRecord[] = [
     investigations: ["CT Scan", "ACE", "ESR"],
     clinicalNotes:
       "Löfgren presentation with erythema nodosum, bilateral ankle arthritis, and hilar adenopathy.",
-  }),
-  // Temp Patient 2001 visit
-  createSeedVisit({
-    id: "vis-temp-01",
-    tempPatientId: "tmp-2001",
-    date: "2026-11-04T11:15:00Z",
-    symptoms: ["imaging_enlarged_chest_lymph_nodes", "dry_cough"],
-    labs: { ace: 74 },
-    investigations: ["Chest X-ray", "ACE"],
-    clinicalNotes: "Initial outpatient triage score.",
   }),
 ];
 

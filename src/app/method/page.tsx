@@ -4,6 +4,8 @@ import React from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import model from "@/data/model.json";
+import { useAuth } from "@/lib/auth";
+import { canUseQuickCalculator } from "@/lib/rls";
 import {
   BookOpen,
   Table2,
@@ -13,7 +15,6 @@ import {
   Aperture,
   Image as ImageIcon,
   FolderSearch,
-  Clock,
   AlertTriangle,
   ArrowRight,
 } from "lucide-react";
@@ -26,6 +27,7 @@ const fadeUp = {
 };
 
 export default function MethodPage() {
+  const { user } = useAuth();
   const baseChancePct = Math.round(model.pretest_probability * 100);
 
   return (
@@ -50,13 +52,23 @@ export default function MethodPage() {
               percentage.
             </p>
           </div>
-          <Link
-            href="/check"
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary px-5 py-3 text-[15px] font-medium text-primary-foreground transition-colors hover:bg-primary-hover"
-          >
-            <span>Check a patient</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          {canUseQuickCalculator(user) ? (
+            <Link
+              href="/check"
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary px-5 py-3 text-[15px] font-medium text-primary-foreground transition-colors hover:bg-primary-hover"
+            >
+              <span>Check a patient</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          ) : !user ? (
+            <Link
+              href="/login"
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary px-5 py-3 text-[15px] font-medium text-primary-foreground transition-colors hover:bg-primary-hover"
+            >
+              <span>Login to Platform</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          ) : null}
         </div>
       </motion.div>
 
@@ -418,39 +430,7 @@ export default function MethodPage() {
           </div>
         </motion.section>
 
-        {/* 8. Planned platform (not part of this demo) */}
-        <motion.section
-          id="planned-platform"
-          {...fadeUp}
-          className="rounded-2xl border border-border bg-card/75 p-6 md:p-8"
-        >
-          <div className="flex flex-col sm:flex-row items-start gap-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary border border-primary/20">
-              <Clock className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2.5 mb-1.5">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                  08 · Roadmap Scope
-                </span>
-                <span className="inline-flex items-center rounded-full border border-border bg-background px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-                  Not part of this demo
-                </span>
-              </div>
-              <h2 className="font-serif text-2xl font-medium text-foreground mb-2">
-                Planned platform
-              </h2>
-              <p className="text-[16px] leading-relaxed text-foreground/90">
-                Planned next stage. This demo contains only the likelihood
-                calculator. A future version is planned with doctor accounts,
-                patient files, a research page for adding new cases, and an
-                admin area. It is not built yet.
-              </p>
-            </div>
-          </div>
-        </motion.section>
-
-        {/* 9. Limitations */}
+        {/* 8. Limitations */}
         <motion.section
           id="limitations"
           {...fadeUp}
@@ -462,7 +442,7 @@ export default function MethodPage() {
             </div>
             <div>
               <span className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9A6B08] mb-1">
-                09 · Prototype Scope
+                08 · Prototype Scope
               </span>
               <h2 className="font-serif text-2xl font-medium text-foreground mb-2">
                 Limitations

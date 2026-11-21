@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import model from "@/data/model.json";
 import { score } from "@/lib/scoring";
 import { useAuth } from "@/lib/auth";
-import { ROLE_HOME_ROUTE, ROLE_LABELS } from "@/lib/rls";
+import { ROLE_HOME_ROUTE, ROLE_LABELS, canUseQuickCalculator } from "@/lib/rls";
 import {
   ArrowRight,
   LogIn,
@@ -82,13 +82,24 @@ export default function HomePage() {
 
             <div className="mt-8 flex flex-wrap items-center gap-3.5">
               {user ? (
-                <Link
-                  href={ROLE_HOME_ROUTE[user.role]}
-                  className="inline-flex items-center gap-2.5 rounded-lg bg-primary px-6 py-3.5 text-[16px] font-medium text-primary-foreground transition-colors hover:bg-primary-hover"
-                >
-                  <span>Go to {ROLE_LABELS[user.role]} Home</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
+                <>
+                  <Link
+                    href={ROLE_HOME_ROUTE[user.role]}
+                    className="inline-flex items-center gap-2.5 rounded-lg bg-primary px-6 py-3.5 text-[16px] font-medium text-primary-foreground transition-colors hover:bg-primary-hover"
+                  >
+                    <span>Go to {ROLE_LABELS[user.role]} Home</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  {canUseQuickCalculator(user) && (
+                    <Link
+                      href="/check"
+                      className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-5 py-3.5 text-[15px] font-medium text-foreground transition-colors hover:bg-background"
+                    >
+                      <span>Quick Calculator</span>
+                      <ArrowRight className="h-4 w-4 text-primary" />
+                    </Link>
+                  )}
+                </>
               ) : (
                 <Link
                   href="/login"
@@ -98,95 +109,116 @@ export default function HomePage() {
                   <span>Login to Platform</span>
                 </Link>
               )}
-
-              <Link
-                href="/check"
-                className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-5 py-3.5 text-[15px] font-medium text-foreground transition-colors hover:bg-background"
-              >
-                <span>Quick Calculator</span>
-                <ArrowRight className="h-4 w-4 text-primary" />
-              </Link>
             </div>
           </motion.div>
 
-          {/* Right: Read-Only Example Result Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.75, ease: EASE_CALM, delay: 0.1 }}
-            className="md:col-span-5"
-          >
-            <div className="rounded-2xl border border-border bg-card p-5 md:p-6 shadow-mockup">
-              <div className="flex items-center justify-between border-b border-border pb-3.5 mb-4">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                  Example Case Likelihood
+          {/* Right: Fixed Read-Only Example Result Card labeled "Example case" with no inputs (hidden only for Patient role) */}
+          {user?.role !== "patient" ? (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.75, ease: EASE_CALM, delay: 0.1 }}
+              className="md:col-span-5"
+            >
+              <div className="rounded-2xl border border-border bg-card p-5 md:p-6 shadow-mockup">
+                <div className="flex items-center justify-between border-b border-border pb-3.5 mb-4">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                    Example case
+                  </span>
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold",
+                      exampleResult.level === "High"
+                        ? "bg-[#C0504D]/12 text-[#C0504D] border-[#C0504D]/30"
+                        : exampleResult.level === "Moderate"
+                        ? "bg-[#E3A21A]/15 text-[#9A6B08] border-[#E3A21A]/40"
+                        : "bg-[#2E8B57]/12 text-[#2E8B57] border-[#2E8B57]/30"
+                    )}
+                  >
+                    {exampleResult.level} Likelihood
+                  </span>
+                </div>
+
+                <div className="flex items-baseline justify-between gap-2">
+                  <span
+                    className="font-serif text-5xl font-semibold tracking-tight tabular-nums"
+                    style={{ color: exampleColorHex }}
+                  >
+                    {examplePct}%
+                  </span>
+                  <span className="text-[13px] font-medium text-muted-foreground">
+                    {exampleResult.level}, total points:{" "}
+                    <strong className="text-foreground tabular-nums">
+                      +{exampleResult.total}
+                    </strong>
+                  </span>
+                </div>
+
+                <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-background border border-border">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    whileInView={{ width: `${examplePct}%` }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.75, ease: EASE_CALM }}
+                    className="h-full rounded-full"
+                    style={{ backgroundColor: exampleColorHex }}
+                  />
+                </div>
+
+                <div className="mt-4 pt-3.5 border-t border-border">
+                  <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-2">
+                    Why
+                  </span>
+                  <ul className="space-y-1.5">
+                    {exampleResult.items.map((item) => (
+                      <li
+                        key={item.label}
+                        className="flex items-center justify-between rounded-md bg-background/85 px-3 py-1.5 text-[13px] border border-border/70"
+                      >
+                        <span className="text-foreground font-medium">
+                          {item.label}
+                        </span>
+                        <span className="font-semibold tabular-nums text-[#2E6DA4]">
+                          +{item.points}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <p className="mt-3.5 text-[11px] text-muted-foreground">
+                  Decision support only. Confirm with a specialist and biopsy.
+                </p>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.75, ease: EASE_CALM, delay: 0.1 }}
+              className="md:col-span-5"
+            >
+              <div className="rounded-2xl border border-border bg-card p-6 shadow-mockup">
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-primary mb-2">
+                  Patient Health Portal
                 </span>
-                <span
-                  className={cn(
-                    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold",
-                    exampleResult.level === "High"
-                      ? "bg-[#C0504D]/12 text-[#C0504D] border-[#C0504D]/30"
-                      : exampleResult.level === "Moderate"
-                      ? "bg-[#E3A21A]/15 text-[#9A6B08] border-[#E3A21A]/40"
-                      : "bg-[#2E8B57]/12 text-[#2E8B57] border-[#2E8B57]/30"
-                  )}
+                <h2 className="font-serif text-2xl font-medium text-foreground mb-2">
+                  My Health Records
+                </h2>
+                <p className="text-[15px] text-muted-foreground leading-relaxed mb-4">
+                  Access your completed imaging scans and laboratory test
+                  results with dates in a read-only personal health view.
+                </p>
+                <Link
+                  href="/my-health"
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[14px] font-medium text-primary-foreground hover:bg-primary-hover transition-colors"
                 >
-                  {exampleResult.level} Likelihood
-                </span>
+                  <span>Open My Health</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </div>
-
-              <div className="flex items-baseline justify-between gap-2">
-                <span
-                  className="font-serif text-5xl font-semibold tracking-tight tabular-nums"
-                  style={{ color: exampleColorHex }}
-                >
-                  {examplePct}%
-                </span>
-                <span className="text-[13px] font-medium text-muted-foreground">
-                  {exampleResult.level}, total points:{" "}
-                  <strong className="text-foreground tabular-nums">
-                    +{exampleResult.total}
-                  </strong>
-                </span>
-              </div>
-
-              <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-background border border-border">
-                <motion.div
-                  initial={{ width: 0 }}
-                  whileInView={{ width: `${examplePct}%` }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.75, ease: EASE_CALM }}
-                  className="h-full rounded-full"
-                  style={{ backgroundColor: exampleColorHex }}
-                />
-              </div>
-
-              <div className="mt-4 pt-3.5 border-t border-border">
-                <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-2">
-                  Why
-                </span>
-                <ul className="space-y-1.5">
-                  {exampleResult.items.map((item) => (
-                    <li
-                      key={item.label}
-                      className="flex items-center justify-between rounded-md bg-background/85 px-3 py-1.5 text-[13px] border border-border/70"
-                    >
-                      <span className="text-foreground font-medium">
-                        {item.label}
-                      </span>
-                      <span className="font-semibold tabular-nums text-[#2E6DA4]">
-                        +{item.points}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <p className="mt-3.5 text-[11px] text-muted-foreground">
-                Decision support only. Confirm with a specialist and biopsy.
-              </p>
-            </div>
-          </motion.div>
+            </motion.div>
+          )}
         </div>
       </section>
 

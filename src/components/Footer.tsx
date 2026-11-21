@@ -1,9 +1,16 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import model from "@/data/model.json";
+import { useAuth } from "@/lib/auth";
+import { canUseQuickCalculator } from "@/lib/rls";
 import { Stethoscope, ShieldAlert } from "lucide-react";
 
 export function Footer() {
+  const { user } = useAuth();
+  const canUseCalc = canUseQuickCalculator(user);
+
   return (
     <footer className="no-print bg-sage-deep text-[#F5F2EA] border-t border-border pb-20 md:pb-0">
       {/* Always-visible Clinical Model Disclaimer Banner */}
@@ -33,7 +40,7 @@ export function Footer() {
               </span>
             </div>
             <p className="text-[14px] leading-relaxed text-[#F5F2EA]/70">
-              Helping medical doctors suspect sarcoidosis earlier through structured symptom and laboratory likelihood scoring.
+              Helping medical doctors suspect sarcoidosis earlier through structured symptom and laboratory decision support.
             </p>
           </div>
 
@@ -43,11 +50,19 @@ export function Footer() {
               Product
             </h3>
             <ul className="space-y-2.5 text-[14px] text-[#F5F2EA]/80">
-              <li>
-                <Link href="/check" className="hover:text-white transition-colors">
-                  Check a Patient
-                </Link>
-              </li>
+              {canUseCalc ? (
+                <li>
+                  <Link href="/check" className="hover:text-white transition-colors">
+                    Check a Patient
+                  </Link>
+                </li>
+              ) : !user ? (
+                <li>
+                  <Link href="/login" className="hover:text-white transition-colors">
+                    Login to Platform
+                  </Link>
+                </li>
+              ) : null}
               <li>
                 <Link href="/insights" className="hover:text-white transition-colors">
                   Dataset Insights ({model.stats.total_cases} Cases)
@@ -56,11 +71,6 @@ export function Footer() {
               <li>
                 <Link href="/method" className="hover:text-white transition-colors">
                   How the Score Works
-                </Link>
-              </li>
-              <li>
-                <Link href="/method#planned-platform" className="hover:text-white transition-colors">
-                  Planned Next Stage
                 </Link>
               </li>
             </ul>
@@ -101,11 +111,6 @@ export function Footer() {
                   Prototype Limitations
                 </Link>
               </li>
-              <li>
-                <Link href="/method#planned-platform" className="hover:text-white transition-colors">
-                  Planned Platform Scope
-                </Link>
-              </li>
             </ul>
           </div>
         </div>
@@ -114,11 +119,10 @@ export function Footer() {
         <div className="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-[13px] text-[#F5F2EA]/65">
           <div>(c) 2026 SarcoScore · Student Research Prototype.</div>
           <div className="max-w-xl md:text-right">
-            This website provides general information. Score results from the points-based scoring model are decision support only and are not medical advice.
+            This website provides general information. Clinical findings are decision support only and are not medical advice.
           </div>
         </div>
       </div>
     </footer>
   );
 }
-

@@ -220,7 +220,6 @@ export default function MyHealthPage() {
               </div>
 
               <div className="mt-6 pt-4 border-t border-border text-[13px] text-muted-foreground">
-                Decision support only. Confirm with a specialist and biopsy.
                 Please discuss all imaging and laboratory findings directly with
                 your treating physician.
               </div>

@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import model from "@/data/model.json";
 import { score } from "@/lib/scoring";
+import { useAuth } from "@/lib/auth";
+import { canUseQuickCalculator } from "@/lib/rls";
 import { SymptomGroup } from "@/components/SymptomGroup";
 import { LabInput } from "@/components/LabInput";
 import { ResultCard } from "@/components/ResultCard";
@@ -28,9 +31,23 @@ const DEMO_PRESETS = [
 ];
 
 export default function CheckPatientPage() {
+  const { user, ready } = useAuth();
+  const router = useRouter();
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [labStrings, setLabStrings] = useState<Record<string, string>>({});
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+
+  // Require login for Quick Calculator:
+  // - Logged-out visitors -> redirect to /login
+  // - Patient accounts -> redirect to /my-health
+  useEffect(() => {
+    if (!ready) return;
+    if (!user) {
+      router.replace("/login");
+    } else if (user.role === "patient") {
+      router.replace("/my-health");
+    }
+  }, [ready, user, router]);
 
   // Group features by group in the required order
   const groupedFeatures = useMemo(() => {
@@ -128,6 +145,10 @@ export default function CheckPatientPage() {
       : evaluation.level === "Moderate"
       ? "#E3A21A"
       : "#2E8B57";
+
+  if (!ready || !canUseQuickCalculator(user)) {
+    return null;
+  }
 
   return (
     <div className="mx-auto max-w-[1140px] px-5 pt-10 pb-28 lg:pb-16 md:px-10 md:pt-14 lg:px-16">

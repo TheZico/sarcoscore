@@ -18,11 +18,9 @@ import { RoleGuard } from "@/components/RoleGuard";
 import { useAuth } from "@/lib/auth";
 import {
   getPatientRecordById,
-  getTempPatientRecordById,
   recordPatientFileOpened,
   listVisitsForPatient,
   updatePatientPersonalAndDiagnosis,
-  updateTempPatientRecord,
   addClinicalVisit,
   getMedicalLists,
   getLabRanges,
@@ -117,8 +115,6 @@ function PatientProfileContent() {
     user && (user.role === "admin" || user.role === "doctor");
 
   const patient = canRead ? getPatientRecordById(user, patientId) : undefined;
-  const tempPatient =
-    canRead && !patient ? getTempPatientRecordById(user, patientId) : undefined;
   const visits = canRead ? listVisitsForPatient(user, patientId) : [];
   const latestVisit = visits.length > 0 ? visits[visits.length - 1] : undefined;
 
@@ -130,7 +126,6 @@ function PatientProfileContent() {
   const [editName, setEditName] = useState("");
   const [editGender, setEditGender] = useState<"Female" | "Male">("Female");
   const [editDob, setEditDob] = useState("");
-  const [editAge, setEditAge] = useState("45");
   const [editPhone, setEditPhone] = useState("");
   const [editHistory, setEditHistory] = useState("");
   const [diagnosisInput, setDiagnosisInput] = useState("");
@@ -146,14 +141,8 @@ function PatientProfileContent() {
       setEditPhone(patient.phone);
       setEditHistory(patient.historySummary);
       setDiagnosisInput(patient.recordedDiagnosis);
-    } else if (tempPatient) {
-      setEditName(tempPatient.label);
-      setEditGender(tempPatient.gender);
-      setEditAge(String(tempPatient.age));
-      setEditHistory(tempPatient.notes);
-      setDiagnosisInput(tempPatient.recordedDiagnosis);
     }
-  }, [patient, tempPatient]);
+  }, [patient]);
 
   // New Visit Composer state
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
@@ -235,25 +224,16 @@ function PatientProfileContent() {
 
   const handleSavePersonalInfo = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !patient) return;
     setErrorNotice(null);
     try {
-      if (patient) {
-        updatePatientPersonalAndDiagnosis(user, patient.id, {
-          fullName: editName,
-          gender: editGender,
-          dob: editDob,
-          phone: editPhone,
-          historySummary: editHistory,
-        });
-      } else if (tempPatient) {
-        updateTempPatientRecord(user, tempPatient.id, {
-          label: editName,
-          gender: editGender,
-          age: Number(editAge) || tempPatient.age,
-          notes: editHistory,
-        });
-      }
+      updatePatientPersonalAndDiagnosis(user, patient.id, {
+        fullName: editName,
+        gender: editGender,
+        dob: editDob,
+        phone: editPhone,
+        historySummary: editHistory,
+      });
       setEditingInfo(false);
       setSavedNotice("Personal information and medical history updated.");
       triggerRefresh();
@@ -268,18 +248,12 @@ function PatientProfileContent() {
 
   const handleSaveDiagnosis = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !patient) return;
     setErrorNotice(null);
     try {
-      if (patient) {
-        updatePatientPersonalAndDiagnosis(user, patient.id, {
-          recordedDiagnosis: diagnosisInput,
-        });
-      } else if (tempPatient) {
-        updateTempPatientRecord(user, tempPatient.id, {
-          recordedDiagnosis: diagnosisInput,
-        });
-      }
+      updatePatientPersonalAndDiagnosis(user, patient.id, {
+        recordedDiagnosis: diagnosisInput,
+      });
       setSavedNotice("Doctor-recorded diagnosis saved to patient record.");
       triggerRefresh();
     } catch (err) {
@@ -290,13 +264,12 @@ function PatientProfileContent() {
   };
 
   const handleSaveVisit = () => {
-    if (!user || isSavingVisit) return;
+    if (!user || !patient || isSavingVisit) return;
     setIsSavingVisit(true);
     setErrorNotice(null);
     try {
       addClinicalVisit(user, {
-        patientId: patient?.id,
-        tempPatientId: tempPatient?.id,
+        patientId: patient.id,
         symptoms: selectedSymptoms,
         labs: numericLabs,
         investigations: selectedInvestigations,
@@ -359,13 +332,13 @@ function PatientProfileContent() {
   return (
     <RoleGuard feature="patient_profile" featureTitle="Patient Profile">
       <div className="mx-auto max-w-[1140px] px-5 py-10 md:px-10 md:py-16 lg:px-16">
-        {!patient && !tempPatient ? (
+        {!patient ? (
           <div className="rounded-2xl border border-border bg-card p-8 text-center">
             <h1 className="font-serif text-2xl font-medium text-foreground mb-2">
               Patient file not found
             </h1>
             <p className="text-[15px] text-muted-foreground mb-5">
-              No patient or temporary file exists for internal ID{" "}
+              No patient file exists for internal ID{" "}
               <code className="font-mono">{patientId}</code>.
             </p>
             <Link
@@ -452,24 +425,17 @@ function PatientProfileContent() {
                 <div>
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <span className="rounded-md bg-primary/12 px-2.5 py-0.5 font-mono text-[12px] font-semibold text-primary">
-                      {patient ? patient.patientCode : tempPatient?.patientCode}
+                      {patient.patientCode}
                     </span>
                     <span className="rounded-md border border-border bg-background px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                       Internal Route ID: {patientId}
                     </span>
-                    {tempPatient && (
-                      <span className="rounded-full bg-[#E3A21A]/15 px-2.5 py-0.5 text-[11px] font-semibold text-[#9A6B08]">
-                        Temporary File (No National ID)
-                      </span>
-                    )}
                   </div>
                   <h1 className="font-serif text-3xl md:text-4xl font-medium text-foreground">
-                    {patient ? patient.fullName : tempPatient?.label}
+                    {patient.fullName}
                   </h1>
                   <p className="mt-1 text-[14px] text-muted-foreground">
-                    {patient
-                      ? `${patient.gender} · DOB: ${patient.dob} · Phone: ${patient.phone} · Fake National ID: ${patient.nationalId}`
-                      : `${tempPatient?.gender} · Approx. Age: ${tempPatient?.age} yrs`}
+                    {`${patient.gender} · DOB: ${patient.dob} · Phone: ${patient.phone} · Fake National ID: ${patient.nationalId}`}
                   </p>
                 </div>
 
@@ -495,7 +461,7 @@ function PatientProfileContent() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="sm:col-span-2">
                       <label className="block text-[13px] font-semibold text-foreground mb-1">
-                        {patient ? "Full Name" : "Temporary Label / Name"}
+                        Full Name
                       </label>
                       <input
                         type="text"
@@ -520,46 +486,30 @@ function PatientProfileContent() {
                         <option value="Male">Male</option>
                       </select>
                     </div>
-                    {patient ? (
-                      <div>
-                        <label className="block text-[13px] font-semibold text-foreground mb-1">
-                          Date of Birth
-                        </label>
-                        <input
-                          type="date"
-                          value={editDob}
-                          onChange={(e) => setEditDob(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-card px-3 py-2 text-[14px] text-foreground"
-                        />
-                      </div>
-                    ) : (
-                      <div>
-                        <label className="block text-[13px] font-semibold text-foreground mb-1">
-                          Approximate Age
-                        </label>
-                        <input
-                          type="number"
-                          value={editAge}
-                          onChange={(e) => setEditAge(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-card px-3 py-2 text-[14px] text-foreground"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {patient && (
                     <div>
                       <label className="block text-[13px] font-semibold text-foreground mb-1">
-                        Phone Number
+                        Date of Birth
                       </label>
                       <input
-                        type="text"
-                        value={editPhone}
-                        onChange={(e) => setEditPhone(e.target.value)}
-                        className="w-full max-w-xs rounded-lg border border-border bg-card px-3 py-2 text-[14px] text-foreground"
+                        type="date"
+                        value={editDob}
+                        onChange={(e) => setEditDob(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-card px-3 py-2 text-[14px] text-foreground"
                       />
                     </div>
-                  )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[13px] font-semibold text-foreground mb-1">
+                      Phone Number
+                    </label>
+                    <input
+                      type="text"
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      className="w-full max-w-xs rounded-lg border border-border bg-card px-3 py-2 text-[14px] text-foreground"
+                    />
+                  </div>
 
                   <div>
                     <label className="block text-[13px] font-semibold text-foreground mb-1">
@@ -589,7 +539,7 @@ function PatientProfileContent() {
                       Medical History Summary
                     </span>
                     <p className="text-[16px] leading-relaxed text-foreground/90">
-                      {patient ? patient.historySummary : tempPatient?.notes}
+                      {patient.historySummary}
                     </p>
                   </div>
 

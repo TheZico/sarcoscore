@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { AppFeature, ROLE_HOME_ROUTE, ROLE_LABELS } from "@/lib/rls";
 import { ShieldAlert, Lock, ArrowRight } from "lucide-react";
@@ -18,6 +19,16 @@ export function RoleGuard({
   children,
 }: RoleGuardProps) {
   const { user, ready, hasAccess } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!ready) return;
+    if (!user) {
+      router.replace("/login");
+    } else if (!hasAccess(feature)) {
+      router.replace(ROLE_HOME_ROUTE[user.role]);
+    }
+  }, [ready, user, feature, hasAccess, router]);
 
   if (!ready) {
     return (

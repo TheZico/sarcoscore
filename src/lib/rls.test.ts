@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
+import { middleware } from "@/middleware";
 import {
   canAccessFeature,
+  canUseQuickCalculator,
+  assertQuickCalculatorAccess,
   ROLE_HOME_ROUTE,
   RLSViolationError,
   isValidNationalId,
@@ -14,10 +18,11 @@ import {
   getPatientRecordById,
   listVisitsForPatient,
   createPatientFile,
-  createTemporaryPatientFile,
   addClinicalVisit,
   listImportedCases,
   submitImportedResearchCase,
+  submitManualResearchCase,
+  updateImportedCaseStatus,
   listUserAccounts,
   createUserAccount,
   updateUserAccountRole,
@@ -94,6 +99,85 @@ describe("SarcoScore Auth, Roles, Row Level Security (RLS) & Security Hardening"
     expect(canAccessFeature(patient, "my_health")).toBe(true);
   });
 
+  it("requires login for Quick Calculator: blocks logged-out visitors (-> /login) and Patients (-> /my-health), while allowing Doctor, Admin, and Researcher", () => {
+    const admin = authenticateWithEmailPassword("admin@sarcoscore.demo", "demo1234");
+    const doctor = authenticateWithEmailPassword("doctor@sarcoscore.demo", "demo1234");
+    const researcher = authenticateWithEmailPassword("researcher@sarcoscore.demo", "demo1234");
+    const patient = authenticateWithEmailPassword("patient@sarcoscore.demo", "demo1234");
+
+    // 1. Logged-out visitor (null) -> blocked on Quick Calculator and all protected internal routes (-> /login)
+    expect(canUseQuickCalculator(null)).toBe(false);
+    expect(() => assertQuickCalculatorAccess(null)).toThrow(RLSViolationError);
+
+    for (const protectedPath of [
+      "/check",
+      "/dashboard",
+      "/cases/new",
+      "/patients/pat-1001",
+      "/research",
+      "/admin",
+      "/my-health",
+    ]) {
+      const visitorReq = new NextRequest(
+        `http://localhost:3000${protectedPath}`
+      );
+      const visitorRes = middleware(visitorReq);
+      expect(visitorRes.status).toBe(307);
+      expect(visitorRes.headers.get("location")).toBe(
+        "http://localhost:3000/login"
+      );
+    }
+
+    // 2. Patient -> blocked from Quick Calculator, Dashboard, Create/Review, Patient Profile, Research, and Admin (-> /my-health)
+    expect(canUseQuickCalculator(patient)).toBe(false);
+    expect(() => assertQuickCalculatorAccess(patient)).toThrow(RLSViolationError);
+
+    for (const forbiddenForPatient of [
+      "/check",
+      "/dashboard",
+      "/cases/new",
+      "/patients/pat-1001",
+      "/research",
+      "/admin",
+    ]) {
+      const patientReq = new NextRequest(
+        `http://localhost:3000${forbiddenForPatient}`,
+        {
+          headers: { cookie: "sarcoscore_role=patient" },
+        }
+      );
+      const patientRes = middleware(patientReq);
+      expect(patientRes.status).toBe(307);
+      expect(patientRes.headers.get("location")).toBe(
+        "http://localhost:3000/my-health"
+      );
+    }
+
+    // Patient allowed on /my-health
+    const patientOwnRouteReq = new NextRequest(
+      "http://localhost:3000/my-health",
+      {
+        headers: { cookie: "sarcoscore_role=patient" },
+      }
+    );
+    expect(middleware(patientOwnRouteReq).status).toBe(200);
+
+    // 3. Doctor, Admin, and Researcher -> allowed
+    expect(canUseQuickCalculator(doctor)).toBe(true);
+    expect(canUseQuickCalculator(admin)).toBe(true);
+    expect(canUseQuickCalculator(researcher)).toBe(true);
+    expect(() => assertQuickCalculatorAccess(doctor)).not.toThrow();
+    expect(() => assertQuickCalculatorAccess(admin)).not.toThrow();
+    expect(() => assertQuickCalculatorAccess(researcher)).not.toThrow();
+
+    const doctorReq = new NextRequest("http://localhost:3000/check", {
+      headers: { cookie: "sarcoscore_role=doctor" },
+    });
+    const doctorRes = middleware(doctorReq);
+    expect(doctorRes.status).toBe(200);
+    expect(doctorRes.headers.get("location")).toBeNull();
+  });
+
   it("rejects all unauthenticated (null) requests across every module with RLSViolationError", () => {
     expect(() => listPatientsForDashboard(null)).toThrow(RLSViolationError);
     expect(() => getPatientRecordById(null, "pat-1001")).toThrow(RLSViolationError);
@@ -120,31 +204,97 @@ describe("SarcoScore Auth, Roles, Row Level Security (RLS) & Security Hardening"
     expect(() => exportDatabaseBackup(doctor)).toThrow(RLSViolationError);
   });
 
-  it("blocks a Researcher from reading clinical Dashboard/Patient files or System Management", () => {
+  it("supports both independent research add-case methods (Upload file OR Enter manually) with pending status and Admin/Researcher approval", () => {
+    const admin = authenticateWithEmailPassword("admin@sarcoscore.demo", "demo1234");
     const researcher = authenticateWithEmailPassword(
       "researcher@sarcoscore.demo",
       "demo1234"
     );
+    const doctor = authenticateWithEmailPassword("doctor@sarcoscore.demo", "demo1234");
 
-    // Allowed research operations
-    const imported = listImportedCases(researcher);
-    expect(imported.length).toBeGreaterThanOrEqual(2);
-
-    const newImport = submitImportedResearchCase(researcher, {
-      fileName: "new_cases.xlsx",
-      fileType: "Excel",
-      caseCode: "LIT-2026-99",
-      age: 50,
-      gender: "Female",
-      source: "PubMed",
-      symptoms: ["dry_cough"],
-      investigations: "Chest X-ray",
-      confirmedDisease: "Sarcoidosis",
-      diagnosticTimeMonths: 6,
+    // Method 1: File upload alone (no manual fields required)
+    const uploadedOnly = submitImportedResearchCase(researcher, {
+      fileName: "new_cases_only.xlsx",
     });
-    expect(newImport.status).toBe("pending");
+    expect(uploadedOnly.status).toBe("pending");
+    expect(uploadedOnly.entryMethod).toBe("upload");
 
-    // Blocked by RLS
+    // Method 2: Manual entry alone (no file upload required)
+    const manualOnly = submitManualResearchCase(researcher, {
+      caseCode: "LIT-2026-88",
+      age: 44,
+      diagnosticTimeMonths: 7,
+      confirmedDisease: "Sarcoidosis",
+      symptoms: ["dry_cough", "imaging_enlarged_chest_lymph_nodes"],
+      testValues: {
+        ace: "112 U/L",
+        examinations: "HRCT bilateral hilar adenopathy",
+      },
+    });
+    expect(manualOnly.status).toBe("pending");
+    expect(manualOnly.entryMethod).toBe("manual");
+    expect(manualOnly.caseSummary.caseCode).toBe("LIT-2026-88");
+
+    // Formula injection protection: values starting with =, +, -, or @ are stored as plain text (prefixed with ')
+    const formulaCase = submitManualResearchCase(researcher, {
+      caseCode: "=CMD|' /C calc'!A0",
+      age: 40,
+      diagnosticTimeMonths: 4,
+      confirmedDisease: "+HYPERLINK(\"http://evil.example\")",
+      symptoms: ["dry_cough"],
+      testValues: {
+        ace: "-2+3",
+        examinations: "@SUM(1,2)",
+      },
+    });
+    expect(formulaCase.caseSummary.caseCode.startsWith("'=")).toBe(true);
+    expect(formulaCase.caseSummary.confirmedDisease.startsWith("'+")).toBe(true);
+    expect(formulaCase.caseSummary.testValues?.ace).toBe("'-2+3");
+    expect(formulaCase.caseSummary.testValues?.examinations).toBe("'@SUM(1,2)");
+
+    // Server schema validation rejects invalid manual case inputs
+    expect(() =>
+      submitManualResearchCase(researcher, {
+        caseCode: "",
+        age: 44,
+        diagnosticTimeMonths: 5,
+        confirmedDisease: "Sarcoidosis",
+        symptoms: [],
+        testValues: {},
+      })
+    ).toThrow(ValidationError);
+
+    expect(() =>
+      submitManualResearchCase(researcher, {
+        caseCode: "LIT-BAD-AGE",
+        age: 180,
+        diagnosticTimeMonths: 5,
+        confirmedDisease: "Sarcoidosis",
+        symptoms: [],
+        testValues: {},
+      })
+    ).toThrow(ValidationError);
+
+    // Researcher OR Admin can approve a pending case; Doctor cannot
+    expect(() =>
+      updateImportedCaseStatus(doctor, manualOnly.id, "approved")
+    ).toThrow(RLSViolationError);
+
+    const researcherApproved = updateImportedCaseStatus(
+      researcher,
+      manualOnly.id,
+      "approved"
+    );
+    expect(researcherApproved.status).toBe("approved");
+
+    const adminApproved = updateImportedCaseStatus(
+      admin,
+      uploadedOnly.id,
+      "approved"
+    );
+    expect(adminApproved.status).toBe("approved");
+
+    // Researcher is still blocked from clinical Dashboard/Patient files and System Management
     expect(() => listPatientsForDashboard(researcher)).toThrow(RLSViolationError);
     expect(() => getPatientRecordById(researcher, "pat-1001")).toThrow(
       RLSViolationError
@@ -286,16 +436,6 @@ describe("SarcoScore Auth, Roles, Row Level Security (RLS) & Security Hardening"
       })
     ).toThrow(/already exists/);
 
-    // Rejects invalid temporary patient age
-    expect(() =>
-      createTemporaryPatientFile(doctor, {
-        label: "Temp Case",
-        gender: "Male",
-        age: -5,
-        notes: "Invalid negative age",
-      })
-    ).toThrow(ValidationError);
-
     // Verify audit log is written, does NOT leak National ID or full name, and cannot be mutated externally
     const logs = listRecentAuditChanges(admin);
     expect(logs[0].action).toBe("CREATE_PATIENT_FILE");
@@ -319,15 +459,6 @@ describe("SarcoScore Auth, Roles, Row Level Security (RLS) & Security Hardening"
     expect(() =>
       submitImportedResearchCase(researcher, {
         fileName: "malware.exe",
-        fileType: "Excel",
-        caseCode: "LIT-BAD-1",
-        age: 40,
-        gender: "Male",
-        source: "Upload",
-        symptoms: ["dry_cough"],
-        investigations: "CT",
-        confirmedDisease: "Sarcoidosis",
-        diagnosticTimeMonths: 3,
       })
     ).toThrow(ValidationError);
 
@@ -335,16 +466,7 @@ describe("SarcoScore Auth, Roles, Row Level Security (RLS) & Security Hardening"
     expect(() =>
       submitImportedResearchCase(researcher, {
         fileName: "huge_dataset.xlsx",
-        fileType: "Excel",
         fileSizeBytes: 6 * 1024 * 1024,
-        caseCode: "LIT-BAD-2",
-        age: 40,
-        gender: "Male",
-        source: "Upload",
-        symptoms: ["dry_cough"],
-        investigations: "CT",
-        confirmedDisease: "Sarcoidosis",
-        diagnosticTimeMonths: 3,
       })
     ).toThrow(/5 MB/);
 
@@ -352,34 +474,16 @@ describe("SarcoScore Auth, Roles, Row Level Security (RLS) & Security Hardening"
     expect(() =>
       submitImportedResearchCase(researcher, {
         fileName: "spoofed.pdf",
-        fileType: "PDF",
         fileSizeBytes: 1024,
         magicBytes: new Uint8Array([0x4d, 0x5a, 0x90, 0x00]),
-        caseCode: "LIT-BAD-3",
-        age: 40,
-        gender: "Male",
-        source: "Upload",
-        symptoms: ["dry_cough"],
-        investigations: "CT",
-        confirmedDisease: "Sarcoidosis",
-        diagnosticTimeMonths: 3,
       })
     ).toThrow(/signature does not match/);
 
     // Valid PDF magic bytes (%PDF) succeeds and stays "pending"
     const validPdf = submitImportedResearchCase(researcher, {
       fileName: "valid_study.pdf",
-      fileType: "PDF",
       fileSizeBytes: 2048,
       magicBytes: new Uint8Array([0x25, 0x50, 0x44, 0x46]),
-      caseCode: "LIT-OK-1",
-      age: 42,
-      gender: "Female",
-      source: "PubMed",
-      symptoms: ["dry_cough"],
-      investigations: "Chest CT",
-      confirmedDisease: "Sarcoidosis",
-      diagnosticTimeMonths: 4,
     });
     expect(validPdf.status).toBe("pending");
   });

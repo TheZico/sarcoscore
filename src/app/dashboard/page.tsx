@@ -7,7 +7,6 @@ import { RoleGuard } from "@/components/RoleGuard";
 import { useAuth } from "@/lib/auth";
 import {
   listPatientsForDashboard,
-  listTempPatientsForDashboard,
   listAllVisitsForClinical,
 } from "@/lib/db";
 import {
@@ -54,7 +53,6 @@ export default function DashboardPage() {
   const [genderFilter, setGenderFilter] = useState<"ALL" | "Female" | "Male">(
     "ALL"
   );
-  const [showTempFiles, setShowTempFiles] = useState(true);
   const [, setRefreshTick] = useState(0);
 
   const handleDbRefresh = useCallback(() => {
@@ -71,11 +69,10 @@ export default function DashboardPage() {
     user && (user.role === "admin" || user.role === "doctor");
 
   const patients = canRead ? listPatientsForDashboard(user) : [];
-  const tempPatients = canRead ? listTempPatientsForDashboard(user) : [];
   const allVisits = canRead ? listAllVisitsForClinical(user) : [];
 
   // Enrich each patient with their latest visit score
-  const enrichedPatients = useMemo(() => {
+  const combinedFiles = useMemo(() => {
     return patients.map((p) => {
       const visits = allVisits
         .filter((v) => v.patientId === p.id)
@@ -91,7 +88,6 @@ export default function DashboardPage() {
         recordedDiagnosis: p.recordedDiagnosis,
         lastOpenedAt: p.lastOpenedAt,
         createdAt: p.createdAt,
-        isTemporary: false,
         visitCount: visits.length,
         latestVisit,
         latestPct: latestVisit ? Math.round(latestVisit.probability * 100) : 10,
@@ -100,38 +96,6 @@ export default function DashboardPage() {
       };
     });
   }, [patients, allVisits]);
-
-  const enrichedTempPatients = useMemo(() => {
-    return tempPatients.map((t) => {
-      const visits = allVisits
-        .filter((v) => v.tempPatientId === t.id)
-        .sort((a, b) => b.date.localeCompare(a.date));
-      const latestVisit = visits[0];
-      return {
-        id: t.id,
-        patientCode: t.patientCode,
-        nationalId: "— (Temp File)",
-        displayName: t.label,
-        gender: t.gender,
-        dobOrAge: `Approx. ${t.age} yrs`,
-        recordedDiagnosis: t.recordedDiagnosis,
-        lastOpenedAt: t.lastOpenedAt,
-        createdAt: t.createdAt,
-        isTemporary: true,
-        visitCount: visits.length,
-        latestVisit,
-        latestPct: latestVisit ? Math.round(latestVisit.probability * 100) : 10,
-        latestLevel: latestVisit?.level ?? "Low",
-        latestTotal: latestVisit?.total ?? 0,
-      };
-    });
-  }, [tempPatients, allVisits]);
-
-  const combinedFiles = useMemo(() => {
-    return showTempFiles
-      ? [...enrichedPatients, ...enrichedTempPatients]
-      : enrichedPatients;
-  }, [enrichedPatients, enrichedTempPatients, showTempFiles]);
 
   // 1. High-risk alerts: patients whose latest score level is High
   const highRiskCases = useMemo(() => {
@@ -213,7 +177,7 @@ export default function DashboardPage() {
               {patients.length}
             </p>
             <p className="mt-1 text-[13px] text-muted-foreground">
-              +{tempPatients.length} temporary triage files
+              Active patient clinical records
             </p>
           </div>
 
@@ -443,16 +407,6 @@ export default function DashboardPage() {
                 <option value="Female">Female</option>
                 <option value="Male">Male</option>
               </select>
-
-              <label className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-[12px] font-medium text-foreground cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showTempFiles}
-                  onChange={(e) => setShowTempFiles(e.target.checked)}
-                  className="accent-primary"
-                />
-                <span>Include Temp Files</span>
-              </label>
             </div>
           </div>
 
@@ -484,7 +438,7 @@ export default function DashboardPage() {
               <thead>
                 <tr className="border-b border-border bg-card/70 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <th className="py-3.5 px-4">Patient ID</th>
-                  <th className="py-3.5 px-4">Patient Name / Label</th>
+                  <th className="py-3.5 px-4">Patient Name</th>
                   <th className="py-3.5 px-4">National ID (Fake)</th>
                   <th className="py-3.5 px-4">Demographics</th>
                   <th className="py-3.5 px-4">Recorded Diagnosis</th>

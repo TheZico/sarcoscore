@@ -3,6 +3,7 @@ import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { AuthProvider } from "@/lib/auth";
+import { SafeAnalytics } from "@/components/SafeAnalytics";
 
 export const metadata: Metadata = {
   title: "SarcoScore · Sarcoidosis Clinical Decision Support Platform",
@@ -35,6 +36,7 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
           <Footer />
         </AuthProvider>
+        <SafeAnalytics />
       </body>
     </html>
   );
