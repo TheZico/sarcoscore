@@ -1,0 +1,1161 @@
+{
+  "version": "2026-11-20",
+  "totalCases": 46,
+  "sarcoidosisCases": 35,
+  "otherCases": 11,
+  "examinationFrequencies": [
+    {
+      "exam": "Tissue Biopsy",
+      "count": 37,
+      "outOf": 46,
+      "displayLabel": "37 of 46"
+    },
+    {
+      "exam": "Chest CT / Imaging",
+      "count": 29,
+      "outOf": 46,
+      "displayLabel": "29 of 46"
+    },
+    {
+      "exam": "Serum ACE Level",
+      "count": 18,
+      "outOf": 46,
+      "displayLabel": "18 of 46"
+    },
+    {
+      "exam": "Heart Tests (ECG / Echo / MRI)",
+      "count": 7,
+      "outOf": 46,
+      "displayLabel": "7 of 46"
+    },
+    {
+      "exam": "Chest X-ray",
+      "count": 6,
+      "outOf": 46,
+      "displayLabel": "6 of 46"
+    },
+    {
+      "exam": "CRP",
+      "count": 6,
+      "outOf": 46,
+      "displayLabel": "6 of 46"
+    },
+    {
+      "exam": "TB Rule-Out Test",
+      "count": 5,
+      "outOf": 46,
+      "displayLabel": "5 of 46"
+    },
+    {
+      "exam": "BALF CD4/CD8",
+      "count": 4,
+      "outOf": 46,
+      "displayLabel": "4 of 46"
+    },
+    {
+      "exam": "Liver Function Tests",
+      "count": 3,
+      "outOf": 46,
+      "displayLabel": "3 of 46"
+    },
+    {
+      "exam": "ESR",
+      "count": 2,
+      "outOf": 46,
+      "displayLabel": "2 of 46"
+    },
+    {
+      "exam": "ALP",
+      "count": 2,
+      "outOf": 46,
+      "displayLabel": "2 of 46"
+    },
+    {
+      "exam": "WBC",
+      "count": 1,
+      "outOf": 46,
+      "displayLabel": "1 of 46"
+    },
+    {
+      "exam": "LDH",
+      "count": 1,
+      "outOf": 46,
+      "displayLabel": "1 of 46"
+    }
+  ],
+  "cases": [
+    {
+      "id": "pub-case-01",
+      "caseNumber": 1,
+      "caseCode": "CASE-01",
+      "age": 56,
+      "gender": "Male",
+      "symptoms": [
+        "fever_fatigue"
+      ],
+      "labs": {},
+      "investigations": [
+        "Clinical Workup"
+      ],
+      "confirmedDisease": "Tularemia",
+      "isSarcoidosis": false,
+      "diagnosticTimeMonths": 1
+    },
+    {
+      "id": "pub-case-02",
+      "caseNumber": 2,
+      "caseCode": "CASE-02",
+      "age": 55,
+      "gender": "Female",
+      "symptoms": [
+        "fever_fatigue",
+        "enlarged_liver"
+      ],
+      "labs": {},
+      "investigations": [
+        "Clinical Workup"
+      ],
+      "confirmedDisease": "Cat scratch disease",
+      "isSarcoidosis": false,
+      "diagnosticTimeMonths": 5
+    },
+    {
+      "id": "pub-case-03",
+      "caseNumber": 3,
+      "caseCode": "CASE-03",
+      "age": 45,
+      "gender": "Male",
+      "symptoms": [
+        "fever_fatigue",
+        "weight_loss",
+        "enlarged_lymph_nodes",
+        "blocked_nose"
+      ],
+      "labs": {},
+      "investigations": [
+        "Clinical Workup"
+      ],
+      "confirmedDisease": "Hodgkin’s lymphoma",
+      "isSarcoidosis": false,
+      "diagnosticTimeMonths": 24
+    },
+    {
+      "id": "pub-case-04",
+      "caseNumber": 4,
+      "caseCode": "CASE-04",
+      "age": 56,
+      "gender": "Female",
+      "symptoms": [
+        "fever_fatigue"
+      ],
+      "labs": {},
+      "investigations": [
+        "Clinical Workup"
+      ],
+      "confirmedDisease": "Biclonal Lymphoma",
+      "isSarcoidosis": false,
+      "diagnosticTimeMonths": 72
+    },
+    {
+      "id": "pub-case-05",
+      "caseNumber": 5,
+      "caseCode": "CASE-05",
+      "age": 70,
+      "gender": "Male",
+      "symptoms": [
+        "fever_fatigue",
+        "dry_cough",
+        "oral_ulcers",
+        "imaging_lung_nodules_infiltrates"
+      ],
+      "labs": {
+        "crp": 16.9
+      },
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Gingiva (oral): Non-caseating granuloma)",
+        "ACE (Normal)",
+        "CRP 16.9 mg/L",
+        "TB Test (Positive)"
+      ],
+      "confirmedDisease": "pulmonary tuberculosis",
+      "isSarcoidosis": false,
+      "diagnosticTimeMonths": 10
+    },
+    {
+      "id": "pub-case-06",
+      "caseNumber": 6,
+      "caseCode": "CASE-06",
+      "age": 66,
+      "gender": "Male",
+      "symptoms": [
+        "fever_fatigue",
+        "dry_cough",
+        "nerve_pain_numbness",
+        "muscle_pain",
+        "skin_lesions_itching",
+        "imaging_enlarged_chest_lymph_nodes",
+        "imaging_lung_nodules_infiltrates"
+      ],
+      "labs": {
+        "ace": 36.9,
+        "crp": 100,
+        "ldh": 284
+      },
+      "investigations": [
+        "Chest CT / Imaging",
+        "Chest X-ray (Normal)",
+        "Biopsy (Cervical + mediastinal lymph node: Other finding)",
+        "ACE 36.9 U/L",
+        "CRP 100 mg/L",
+        "LDH 284 U/L",
+        "TB Test (Negative)",
+        "BALF CD4/CD8 (1.27)"
+      ],
+      "confirmedDisease": "Hodgkin’s lymphoma",
+      "isSarcoidosis": false,
+      "diagnosticTimeMonths": 2
+    },
+    {
+      "id": "pub-case-07",
+      "caseNumber": 7,
+      "caseCode": "CASE-07",
+      "age": 0.75,
+      "gender": "Female",
+      "symptoms": [
+        "fever_fatigue",
+        "skin_lesions_itching"
+      ],
+      "labs": {
+        "ace": 14.2,
+        "crp": 6.56,
+        "wbc": 15
+      },
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Skin: Non-caseating granuloma)",
+        "ACE 14.2 U/L",
+        "CRP 6.56 mg/L",
+        "WBC 15",
+        "TB Test (Negative)"
+      ],
+      "confirmedDisease": "Early-Onset Sarcoidosis (EOS)",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 8
+    },
+    {
+      "id": "pub-case-08",
+      "caseNumber": 8,
+      "caseCode": "CASE-08",
+      "age": 45,
+      "gender": "Female",
+      "symptoms": [
+        "fever_fatigue",
+        "abdominal_pain",
+        "chronic_diarrhea",
+        "weight_loss",
+        "imaging_enlarged_chest_lymph_nodes"
+      ],
+      "labs": {},
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Kidney + spleen: Non-caseating granuloma)"
+      ],
+      "confirmedDisease": "Whipple’s Disease",
+      "isSarcoidosis": false,
+      "diagnosticTimeMonths": 60
+    },
+    {
+      "id": "pub-case-09",
+      "caseNumber": 9,
+      "caseCode": "CASE-09",
+      "age": 58,
+      "gender": "Male",
+      "symptoms": [
+        "shortness_of_breath",
+        "imaging_enlarged_chest_lymph_nodes",
+        "heart_tests_abnormal_ecg_echo_mri"
+      ],
+      "labs": {},
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Lymph node (EBUS): No granuloma)",
+        "Heart Tests (ECG / Echo / MRI)"
+      ],
+      "confirmedDisease": "Biventricular Arrhythmogenic Cardiomyopathy (AC)",
+      "isSarcoidosis": false,
+      "diagnosticTimeMonths": 1
+    },
+    {
+      "id": "pub-case-10",
+      "caseNumber": 10,
+      "caseCode": "CASE-10",
+      "age": 50,
+      "gender": "Male",
+      "symptoms": [
+        "shortness_of_breath",
+        "palpitations_heart_block",
+        "heart_tests_abnormal_ecg_echo_mri"
+      ],
+      "labs": {},
+      "investigations": [
+        "Heart Tests (ECG / Echo / MRI)"
+      ],
+      "confirmedDisease": "Genetic Dilated Cardiomyopathy",
+      "isSarcoidosis": false,
+      "diagnosticTimeMonths": 24
+    },
+    {
+      "id": "pub-case-11",
+      "caseNumber": 11,
+      "caseCode": "CASE-11",
+      "age": 42,
+      "gender": "Female",
+      "symptoms": [
+        "joint_back_pain",
+        "night_sweats",
+        "fever_fatigue",
+        "imaging_enlarged_chest_lymph_nodes",
+        "imaging_lung_nodules_infiltrates"
+      ],
+      "labs": {
+        "ace": 70
+      },
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Lymph node + iliac bone: Non-caseating granuloma)",
+        "ACE 70 U/L"
+      ],
+      "confirmedDisease": "Multisystem Sarcoidosis with Axial Skeleton Involvement",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 6
+    },
+    {
+      "id": "pub-case-12",
+      "caseNumber": 12,
+      "caseCode": "CASE-12",
+      "age": 44,
+      "gender": "Female",
+      "symptoms": [
+        "joint_back_pain",
+        "skin_lesions_itching"
+      ],
+      "labs": {},
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Skin (gluteal ulcer): Non-caseating granuloma)"
+      ],
+      "confirmedDisease": "Isolated Ulcerative Cutaneous Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 2
+    },
+    {
+      "id": "pub-case-13",
+      "caseNumber": 13,
+      "caseCode": "CASE-13",
+      "age": 71,
+      "gender": "Female",
+      "symptoms": [
+        "palpitations_heart_block",
+        "imaging_enlarged_chest_lymph_nodes",
+        "heart_tests_abnormal_ecg_echo_mri"
+      ],
+      "labs": {},
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Lymph node (EBUS): Non-caseating granuloma)",
+        "ACE (Normal)",
+        "Heart Tests (ECG / Echo / MRI)"
+      ],
+      "confirmedDisease": "Cardiac Sarcoidosis with Ulcerative Colitis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 156
+    },
+    {
+      "id": "pub-case-14",
+      "caseNumber": 14,
+      "caseCode": "CASE-14",
+      "age": 70,
+      "gender": "Female",
+      "symptoms": [
+        "fever_fatigue",
+        "shortness_of_breath",
+        "palpitations_heart_block",
+        "heart_tests_abnormal_ecg_echo_mri"
+      ],
+      "labs": {},
+      "investigations": [
+        "Biopsy (Lymph node: Non-caseating granuloma)",
+        "Heart Tests (ECG / Echo / MRI)",
+        "BALF CD4/CD8 (9.039999999999999)"
+      ],
+      "confirmedDisease": "Cardiac Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 36
+    },
+    {
+      "id": "pub-case-15",
+      "caseNumber": 15,
+      "caseCode": "CASE-15",
+      "age": 69,
+      "gender": "Female",
+      "symptoms": [
+        "abdominal_pain"
+      ],
+      "labs": {},
+      "investigations": [
+        "Biopsy (Liver: Inconclusive)"
+      ],
+      "confirmedDisease": "Hepatic Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": null
+    },
+    {
+      "id": "pub-case-16",
+      "caseNumber": 16,
+      "caseCode": "CASE-16",
+      "age": 45,
+      "gender": "Male",
+      "symptoms": [
+        "fever_fatigue",
+        "weight_loss",
+        "shortness_of_breath",
+        "palpitations_heart_block",
+        "imaging_lung_nodules_infiltrates"
+      ],
+      "labs": {},
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Lung: Non-caseating granuloma)",
+        "TB Test (Negative)"
+      ],
+      "confirmedDisease": "Pleuroparenchymal Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": null
+    },
+    {
+      "id": "pub-case-17",
+      "caseNumber": 17,
+      "caseCode": "CASE-17",
+      "age": 26,
+      "gender": "Female",
+      "symptoms": [
+        "joint_back_pain",
+        "skin_lesions_itching"
+      ],
+      "labs": {},
+      "investigations": [
+        "Biopsy (Skin: Non-caseating granuloma)"
+      ],
+      "confirmedDisease": "PPD-like Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 12
+    },
+    {
+      "id": "pub-case-18",
+      "caseNumber": 18,
+      "caseCode": "CASE-18",
+      "age": 39,
+      "gender": "Male",
+      "symptoms": [
+        "night_sweats",
+        "fever_fatigue",
+        "abdominal_pain",
+        "enlarged_lymph_nodes",
+        "skin_lesions_itching",
+        "heart_tests_abnormal_ecg_echo_mri"
+      ],
+      "labs": {},
+      "investigations": [
+        "Chest CT / Imaging",
+        "Chest X-ray (Normal)",
+        "Biopsy (Skin (tattoo): Non-caseating granuloma)",
+        "ACE (Normal)",
+        "Heart Tests (ECG / Echo / MRI)"
+      ],
+      "confirmedDisease": "Tattoo Sarcoidosis with coexisting nonspecific myocarditis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 2
+    },
+    {
+      "id": "pub-case-19",
+      "caseNumber": 19,
+      "caseCode": "CASE-19",
+      "age": 56,
+      "gender": "Female",
+      "symptoms": [
+        "chronic_diarrhea",
+        "nausea_vomiting",
+        "jaundice",
+        "dry_cough",
+        "shortness_of_breath",
+        "imaging_enlarged_chest_lymph_nodes",
+        "imaging_lung_nodules_infiltrates"
+      ],
+      "labs": {},
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Lymph node (EBUS): Non-caseating granuloma)"
+      ],
+      "confirmedDisease": "Pancreatic Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 5
+    },
+    {
+      "id": "pub-case-20",
+      "caseNumber": 20,
+      "caseCode": "CASE-20",
+      "age": 56,
+      "gender": "Female",
+      "symptoms": [
+        "joint_back_pain",
+        "nausea_vomiting",
+        "jaundice",
+        "liver_tests_abnormal"
+      ],
+      "labs": {},
+      "investigations": [
+        "Biopsy (Porta hepatis node + bile duct: Non-caseating granuloma)",
+        "Liver Tests"
+      ],
+      "confirmedDisease": "Biliary Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": null
+    },
+    {
+      "id": "pub-case-21",
+      "caseNumber": 21,
+      "caseCode": "CASE-21",
+      "age": 64,
+      "gender": "Female",
+      "symptoms": [
+        "blocked_nose",
+        "shortness_of_breath"
+      ],
+      "labs": {},
+      "investigations": [
+        "Biopsy (Nose: Non-caseating granuloma)"
+      ],
+      "confirmedDisease": "Sinonasal Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 6
+    },
+    {
+      "id": "pub-case-22",
+      "caseNumber": 22,
+      "caseCode": "CASE-22",
+      "age": 54,
+      "gender": "Male",
+      "symptoms": [
+        "joint_back_pain",
+        "abdominal_pain",
+        "dry_cough",
+        "imaging_enlarged_chest_lymph_nodes",
+        "imaging_lung_nodules_infiltrates"
+      ],
+      "labs": {
+        "ace": 102.2
+      },
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Liver: Non-caseating granuloma)",
+        "ACE 102.2 U/L"
+      ],
+      "confirmedDisease": "Multisystem Sarcoidosis (Pulmonary, Hepatic, Osseous, Lymphatic, Adrenal)",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 1
+    },
+    {
+      "id": "pub-case-23",
+      "caseNumber": 23,
+      "caseCode": "CASE-23",
+      "age": 85,
+      "gender": "Female",
+      "symptoms": [
+        "skin_lesions_itching"
+      ],
+      "labs": {},
+      "investigations": [
+        "Biopsy (Skin (melanoma): Other finding)"
+      ],
+      "confirmedDisease": "Osseous Sarcoidosis of the fibula",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 6
+    },
+    {
+      "id": "pub-case-24",
+      "caseNumber": 24,
+      "caseCode": "CASE-24",
+      "age": 48,
+      "gender": "Female",
+      "symptoms": [
+        "joint_back_pain",
+        "fever_fatigue",
+        "oral_ulcers",
+        "skin_lesions_itching"
+      ],
+      "labs": {
+        "ace": 60
+      },
+      "investigations": [
+        "Chest CT / Imaging",
+        "Chest X-ray (Normal)",
+        "Biopsy (Skin + gum + lip: Non-caseating granuloma)",
+        "ACE 60 U/L"
+      ],
+      "confirmedDisease": "Cutaneous and Oral Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 12
+    },
+    {
+      "id": "pub-case-25",
+      "caseNumber": 25,
+      "caseCode": "CASE-25",
+      "age": null,
+      "gender": "Female",
+      "symptoms": [
+        "joint_back_pain",
+        "fever_fatigue",
+        "abdominal_pain",
+        "enlarged_spleen"
+      ],
+      "labs": {},
+      "investigations": [
+        "Clinical Workup"
+      ],
+      "confirmedDisease": "Isolated Splenic Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": null
+    },
+    {
+      "id": "pub-case-26",
+      "caseNumber": 26,
+      "caseCode": "CASE-26",
+      "age": 66,
+      "gender": "Female",
+      "symptoms": [
+        "fever_fatigue",
+        "nausea_vomiting",
+        "weight_loss"
+      ],
+      "labs": {},
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Bone marrow + tissue: Granuloma (type not stated))"
+      ],
+      "confirmedDisease": "Hepato-Splenic Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 2
+    },
+    {
+      "id": "pub-case-27",
+      "caseNumber": 27,
+      "caseCode": "CASE-27",
+      "age": 35,
+      "gender": "Male",
+      "symptoms": [
+        "dry_cough",
+        "shortness_of_breath",
+        "imaging_enlarged_chest_lymph_nodes",
+        "imaging_lung_nodules_infiltrates"
+      ],
+      "labs": {},
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Lung: Non-caseating granuloma)"
+      ],
+      "confirmedDisease": "Pulmonary Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": null
+    },
+    {
+      "id": "pub-case-28",
+      "caseNumber": 28,
+      "caseCode": "CASE-28",
+      "age": 47,
+      "gender": "Male",
+      "symptoms": [
+        "abdominal_pain",
+        "nausea_vomiting",
+        "weight_loss",
+        "jaundice",
+        "dry_cough",
+        "shortness_of_breath"
+      ],
+      "labs": {},
+      "investigations": [
+        "Biopsy (Pancreas + lymph node: Non-caseating granuloma)"
+      ],
+      "confirmedDisease": "Multisystem Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 4
+    },
+    {
+      "id": "pub-case-32",
+      "caseNumber": 32,
+      "caseCode": "CASE-32",
+      "age": 40,
+      "gender": "Female",
+      "symptoms": [
+        "fever_fatigue",
+        "abdominal_pain",
+        "chronic_diarrhea",
+        "nausea_vomiting",
+        "weight_loss",
+        "muscle_pain",
+        "imaging_enlarged_chest_lymph_nodes",
+        "imaging_lung_nodules_infiltrates"
+      ],
+      "labs": {
+        "crp": 45
+      },
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Bronchial: Non-caseating granuloma)",
+        "CRP 45 mg/L",
+        "BALF CD4/CD8 (13.34)"
+      ],
+      "confirmedDisease": "Crohn's Disease & Biermer's Disease",
+      "isSarcoidosis": false,
+      "diagnosticTimeMonths": 1
+    },
+    {
+      "id": "pub-case-33",
+      "caseNumber": 33,
+      "caseCode": "CASE-33",
+      "age": 53,
+      "gender": "Female",
+      "symptoms": [
+        "fever_fatigue",
+        "nausea_vomiting",
+        "weight_loss",
+        "enlarged_lymph_nodes",
+        "paralysis_weakness",
+        "imaging_enlarged_chest_lymph_nodes",
+        "imaging_lung_nodules_infiltrates"
+      ],
+      "labs": {
+        "ace": 119
+      },
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Bronchial + supraclavicular node: Non-caseating granuloma)",
+        "ACE 119 U/L",
+        "BALF CD4/CD8 (5.74)"
+      ],
+      "confirmedDisease": "Systemic Sarcoidosis associated with Common Variable Immunodeficiency (CVID)",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 7
+    },
+    {
+      "id": "pub-case-34",
+      "caseNumber": 34,
+      "caseCode": "CASE-34",
+      "age": 30,
+      "gender": "Female",
+      "symptoms": [
+        "fever_fatigue",
+        "oral_ulcers",
+        "nerve_pain_numbness",
+        "paralysis_weakness"
+      ],
+      "labs": {},
+      "investigations": [
+        "Biopsy (Minor salivary gland: Other finding)",
+        "ACE (Normal)"
+      ],
+      "confirmedDisease": "MOG Antibody-Associated Disorder (MOGAD)",
+      "isSarcoidosis": false,
+      "diagnosticTimeMonths": 1
+    },
+    {
+      "id": "pub-case-35",
+      "caseNumber": 35,
+      "caseCode": "CASE-35",
+      "age": 52,
+      "gender": "Female",
+      "symptoms": [
+        "nerve_pain_numbness",
+        "paralysis_weakness",
+        "imaging_enlarged_chest_lymph_nodes",
+        "imaging_lung_nodules_infiltrates"
+      ],
+      "labs": {},
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Dura: Non-caseating granuloma)",
+        "ACE (Normal)"
+      ],
+      "confirmedDisease": "Neurosarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 12
+    },
+    {
+      "id": "pub-case-36",
+      "caseNumber": 36,
+      "caseCode": "CASE-36",
+      "age": 55,
+      "gender": "Male",
+      "symptoms": [
+        "fever_fatigue",
+        "abdominal_pain",
+        "nausea_vomiting",
+        "weight_loss",
+        "jaundice",
+        "enlarged_lymph_nodes",
+        "dry_cough",
+        "shortness_of_breath",
+        "muscle_pain",
+        "imaging_enlarged_chest_lymph_nodes",
+        "imaging_lung_nodules_infiltrates"
+      ],
+      "labs": {
+        "crp": 33.39,
+        "esr": 116
+      },
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Lung (CT-guided): Non-caseating granuloma)",
+        "CRP 33.39 mg/L",
+        "ESR 116 mm/hr"
+      ],
+      "confirmedDisease": "Pulmonary & Systemic Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 24
+    },
+    {
+      "id": "pub-case-37",
+      "caseNumber": 37,
+      "caseCode": "CASE-37",
+      "age": 53,
+      "gender": "Male",
+      "symptoms": [
+        "night_sweats",
+        "fever_fatigue",
+        "blocked_nose",
+        "palpitations_heart_block",
+        "heart_tests_abnormal_ecg_echo_mri"
+      ],
+      "labs": {},
+      "investigations": [
+        "Biopsy (Lymph node: No granuloma)",
+        "Heart Tests (ECG / Echo / MRI)"
+      ],
+      "confirmedDisease": "Isolated Cardiac Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 12
+    },
+    {
+      "id": "pub-case-38",
+      "caseNumber": 38,
+      "caseCode": "CASE-38",
+      "age": 56,
+      "gender": "Female",
+      "symptoms": [
+        "joint_back_pain",
+        "fever_fatigue",
+        "abdominal_pain",
+        "chronic_diarrhea",
+        "nausea_vomiting",
+        "weight_loss",
+        "enlarged_liver",
+        "jaundice",
+        "oral_ulcers",
+        "nerve_pain_numbness",
+        "muscle_pain",
+        "imaging_enlarged_chest_lymph_nodes"
+      ],
+      "labs": {
+        "ace": 110
+      },
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Liver: Non-caseating granuloma)",
+        "ACE 110 U/L"
+      ],
+      "confirmedDisease": "Multisystemic Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 4
+    },
+    {
+      "id": "pub-case-39",
+      "caseNumber": 39,
+      "caseCode": "CASE-39",
+      "age": null,
+      "gender": "Male",
+      "symptoms": [
+        "fever_fatigue",
+        "nausea_vomiting",
+        "weight_loss",
+        "muscle_pain",
+        "palpitations_heart_block",
+        "heart_tests_abnormal_ecg_echo_mri"
+      ],
+      "labs": {},
+      "investigations": [
+        "Heart Tests (ECG / Echo / MRI)"
+      ],
+      "confirmedDisease": "Cardiac Sarcoidosis with Ventricular Aneurysm",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": null
+    },
+    {
+      "id": "pub-case-40",
+      "caseNumber": 40,
+      "caseCode": "CASE-40",
+      "age": 29,
+      "gender": "Male",
+      "symptoms": [
+        "imaging_enlarged_chest_lymph_nodes",
+        "liver_tests_abnormal"
+      ],
+      "labs": {
+        "ace": 104,
+        "alp": 790
+      },
+      "investigations": [
+        "Chest CT / Imaging",
+        "Chest X-ray (Bilateral hilar nodes only)",
+        "Biopsy (Liver: Non-caseating granuloma)",
+        "ACE 104 U/L",
+        "ALP 790 U/L",
+        "Liver Tests"
+      ],
+      "confirmedDisease": "Biliary & Hepatic Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 6
+    },
+    {
+      "id": "pub-case-41",
+      "caseNumber": 41,
+      "caseCode": "CASE-41",
+      "age": 58,
+      "gender": "Female",
+      "symptoms": [
+        "night_sweats",
+        "fever_fatigue",
+        "nausea_vomiting",
+        "weight_loss",
+        "enlarged_spleen",
+        "enlarged_liver",
+        "enlarged_lymph_nodes",
+        "dry_cough",
+        "shortness_of_breath",
+        "muscle_pain",
+        "imaging_enlarged_chest_lymph_nodes",
+        "imaging_lung_nodules_infiltrates",
+        "liver_tests_abnormal"
+      ],
+      "labs": {
+        "alp": 500,
+        "esr": 85
+      },
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Liver: Granuloma (type not stated))",
+        "ACE (Normal)",
+        "ESR 85 mm/hr",
+        "ALP 500 U/L",
+        "Liver Tests"
+      ],
+      "confirmedDisease": "Lungs, Liver, and Spleen sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 12
+    },
+    {
+      "id": "pub-case-42",
+      "caseNumber": 42,
+      "caseCode": "CASE-42",
+      "age": 35,
+      "gender": "Male",
+      "symptoms": [
+        "weight_loss",
+        "nerve_pain_numbness",
+        "skin_lesions_itching",
+        "imaging_lung_nodules_infiltrates"
+      ],
+      "labs": {
+        "ace": 60
+      },
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Skin (tattoo): Non-caseating granuloma)",
+        "ACE 60 U/L"
+      ],
+      "confirmedDisease": "Tattoo-Induced Systemic Sarcoidosis (Cutaneous, Ocular, Pulmonary, Auditory)",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 10
+    },
+    {
+      "id": "pub-case-43",
+      "caseNumber": 43,
+      "caseCode": "CASE-43",
+      "age": 43,
+      "gender": "Female",
+      "symptoms": [
+        "night_sweats",
+        "fever_fatigue",
+        "nausea_vomiting",
+        "weight_loss",
+        "enlarged_spleen",
+        "enlarged_liver",
+        "enlarged_lymph_nodes",
+        "dry_cough",
+        "shortness_of_breath",
+        "imaging_enlarged_chest_lymph_nodes",
+        "imaging_lung_nodules_infiltrates"
+      ],
+      "labs": {},
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Lung: Non-caseating granuloma)",
+        "ACE (High (no number))"
+      ],
+      "confirmedDisease": "Sarcoidosis–Lymphoma Syndrome",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 2
+    },
+    {
+      "id": "pub-case-44",
+      "caseNumber": 44,
+      "caseCode": "CASE-44",
+      "age": 56,
+      "gender": "Male",
+      "symptoms": [
+        "joint_back_pain",
+        "abdominal_pain",
+        "imaging_enlarged_chest_lymph_nodes"
+      ],
+      "labs": {},
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Mediastinal node + pubic bone: Non-caseating granuloma)"
+      ],
+      "confirmedDisease": "Osseous Sarcoidosis (Skeletal Pelvic Bone & Lymph Node Involvement)",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 6
+    },
+    {
+      "id": "pub-case-45",
+      "caseNumber": 45,
+      "caseCode": "CASE-45",
+      "age": 34,
+      "gender": "Female",
+      "symptoms": [
+        "fever_fatigue",
+        "nausea_vomiting",
+        "dry_cough",
+        "shortness_of_breath",
+        "imaging_enlarged_chest_lymph_nodes",
+        "imaging_lung_nodules_infiltrates"
+      ],
+      "labs": {},
+      "investigations": [
+        "Chest CT / Imaging",
+        "Chest X-ray (Hilar nodes + lung infiltrates)",
+        "Biopsy (Endobronchial: Non-caseating granuloma)"
+      ],
+      "confirmedDisease": "Pulmonary Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 6
+    },
+    {
+      "id": "pub-case-46",
+      "caseNumber": 46,
+      "caseCode": "CASE-46",
+      "age": 52,
+      "gender": "Female",
+      "symptoms": [
+        "joint_back_pain",
+        "abdominal_pain",
+        "nausea_vomiting",
+        "dry_cough",
+        "shortness_of_breath",
+        "skin_lesions_itching",
+        "imaging_enlarged_chest_lymph_nodes",
+        "imaging_lung_nodules_infiltrates"
+      ],
+      "labs": {
+        "crp": 20
+      },
+      "investigations": [
+        "Chest CT / Imaging",
+        "Biopsy (Lymph node + skin: Non-caseating granuloma)",
+        "ACE (Normal)",
+        "CRP 20 mg/L"
+      ],
+      "confirmedDisease": "Biologic Drug-Induced Pulmonary & Cutaneous Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 24
+    },
+    {
+      "id": "pub-case-47",
+      "caseNumber": 47,
+      "caseCode": "CASE-47",
+      "age": 30,
+      "gender": "Female",
+      "symptoms": [
+        "fever_fatigue",
+        "nausea_vomiting",
+        "enlarged_lymph_nodes",
+        "dry_cough",
+        "shortness_of_breath",
+        "skin_lesions_itching",
+        "imaging_enlarged_chest_lymph_nodes"
+      ],
+      "labs": {
+        "ace": 104
+      },
+      "investigations": [
+        "Chest CT / Imaging",
+        "Chest X-ray (Bilateral hilar nodes only)",
+        "ACE 104 U/L",
+        "TB Test (Negative)"
+      ],
+      "confirmedDisease": "Pulmonary Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 18
+    },
+    {
+      "id": "pub-case-48",
+      "caseNumber": 48,
+      "caseCode": "CASE-48",
+      "age": 14,
+      "gender": "Female",
+      "symptoms": [
+        "fever_fatigue",
+        "abdominal_pain",
+        "nausea_vomiting",
+        "paralysis_weakness"
+      ],
+      "labs": {},
+      "investigations": [
+        "Chest CT / Imaging"
+      ],
+      "confirmedDisease": "Isolated Neurosarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": 5
+    },
+    {
+      "id": "pub-case-49",
+      "caseNumber": 49,
+      "caseCode": "CASE-49",
+      "age": 62,
+      "gender": "Female",
+      "symptoms": [
+        "joint_back_pain",
+        "fever_fatigue",
+        "abdominal_pain",
+        "nausea_vomiting",
+        "skin_lesions_itching"
+      ],
+      "labs": {},
+      "investigations": [
+        "Biopsy (Muscle: Non-caseating granuloma)"
+      ],
+      "confirmedDisease": "Muscular Sarcoidosis",
+      "isSarcoidosis": true,
+      "diagnosticTimeMonths": null
+    }
+  ]
+}

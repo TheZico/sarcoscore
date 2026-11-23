@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import model from "@/data/model.json";
 import { score } from "@/lib/scoring";
+import { getEffectiveScoringConfig } from "@/lib/db";
 import { useAuth } from "@/lib/auth";
 import { canUseQuickCalculator } from "@/lib/rls";
 import { SymptomGroup } from "@/components/SymptomGroup";
@@ -24,10 +25,22 @@ const PREFERRED_GROUP_ORDER = [
 ];
 
 const DEMO_PRESETS = [
-  { name: "Typical + ACE 110 (88%)", vectorIndex: 3 },
-  { name: "Clinical Findings Only (72%)", vectorIndex: 1 },
-  { name: "Mild Labs + Fever (18%)", vectorIndex: 4 },
-  { name: "Look-Alike Symptoms (4%)", vectorIndex: 2 },
+  {
+    name: `Typical + ACE 110 (${model.test_vectors[3]?.expected_probability_pct ?? ""}% )`.replace("% )", "%)"),
+    vectorIndex: 3,
+  },
+  {
+    name: `Clinical Findings Only (${model.test_vectors[1]?.expected_probability_pct ?? ""}%)`,
+    vectorIndex: 1,
+  },
+  {
+    name: `Mild Labs + Fever (${model.test_vectors[4]?.expected_probability_pct ?? ""}%)`,
+    vectorIndex: 4,
+  },
+  {
+    name: `Look-Alike Symptoms (${model.test_vectors[2]?.expected_probability_pct ?? ""}%)`,
+    vectorIndex: 2,
+  },
 ];
 
 export default function CheckPatientPage() {
@@ -36,6 +49,15 @@ export default function CheckPatientPage() {
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [labStrings, setLabStrings] = useState<Record<string, string>>({});
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const [, setScoringTick] = useState(0);
+
+  useEffect(() => {
+    const onDbUpdate = () => setScoringTick((t) => t + 1);
+    window.addEventListener("sarcoscore-db-updated", onDbUpdate);
+    return () => window.removeEventListener("sarcoscore-db-updated", onDbUpdate);
+  }, []);
+
+  const effectiveScoring = getEffectiveScoringConfig();
 
   // Require login for Quick Calculator:
   // - Logged-out visitors -> redirect to /login
@@ -49,16 +71,19 @@ export default function CheckPatientPage() {
     }
   }, [ready, user, router]);
 
-  // Group features by group in the required order
+  // Group merged features (model.json + Admin overrides) by group in the required order
   const groupedFeatures = useMemo(() => {
-    const groupsMap = new Map<string, typeof model.features>();
-    for (const f of model.features) {
+    const groupsMap = new Map<string, typeof effectiveScoring.features>();
+    for (const f of effectiveScoring.features) {
       const existing = groupsMap.get(f.group) ?? [];
       existing.push(f);
       groupsMap.set(f.group, existing);
     }
 
-    const orderedGroups: { groupName: string; features: typeof model.features }[] = [];
+    const orderedGroups: {
+      groupName: string;
+      features: typeof effectiveScoring.features;
+    }[] = [];
     const seen = new Set<string>();
 
     for (const name of PREFERRED_GROUP_ORDER) {
@@ -75,7 +100,7 @@ export default function CheckPatientPage() {
     }
 
     return orderedGroups;
-  }, []);
+  }, [effectiveScoring.features]);
 
   // Convert string lab inputs to numeric record for score()
   const numericLabs = useMemo(() => {
@@ -93,19 +118,25 @@ export default function CheckPatientPage() {
 
   const evaluation = useMemo(
     () =>
-      score({
-        symptoms: selectedSymptoms,
-        labs: numericLabs,
-      }),
-    [selectedSymptoms, numericLabs]
+      score(
+        {
+          symptoms: selectedSymptoms,
+          labs: numericLabs,
+        },
+        {
+          customFeatures: effectiveScoring.features,
+          customLabs: effectiveScoring.labs,
+        }
+      ),
+    [selectedSymptoms, numericLabs, effectiveScoring.features, effectiveScoring.labs]
   );
 
   const zeroPointSelectedLabels = useMemo(() => {
     return selectedSymptoms
-      .map((id) => model.features.find((f) => f.id === id))
+      .map((id) => effectiveScoring.features.find((f) => f.id === id))
       .filter((f): f is NonNullable<typeof f> => Boolean(f && f.points === 0))
       .map((f) => f.label);
-  }, [selectedSymptoms]);
+  }, [selectedSymptoms, effectiveScoring.features]);
 
   const handleToggleSymptom = (id: string) => {
     setSelectedSymptoms((prev) =>
@@ -233,7 +264,7 @@ export default function CheckPatientPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {model.labs.map((lab) => (
+              {effectiveScoring.labs.map((lab) => (
                 <LabInput
                   key={lab.id}
                   lab={lab}

@@ -37,6 +37,11 @@ function formatPct(val: number | null): string {
 export default function InsightsPage() {
   const { user } = useAuth();
   const { stats, features } = model;
+  const minFeaturePts = Math.min(...features.map((f) => f.points));
+  const maxFeaturePts = Math.max(...features.map((f) => f.points));
+  const maxDiagYears = Number(
+    (stats.diagnostic_time_months.max / 12).toFixed(1)
+  );
 
   return (
     <div className="mx-auto max-w-[1140px] px-5 py-12 md:px-10 md:py-20 lg:px-16">
@@ -139,8 +144,7 @@ export default function InsightsPage() {
           </p>
           <p className="mt-1 text-[14px] text-muted-foreground">
             Mean {stats.diagnostic_time_months.avg} mo · Max{" "}
-            {stats.diagnostic_time_months.max / 12} yrs (
-            {stats.diagnostic_time_months.max} mo)
+            {maxDiagYears} yrs ({stats.diagnostic_time_months.max} mo)
           </p>
         </div>
       </motion.div>
@@ -203,7 +207,8 @@ export default function InsightsPage() {
               Points per Finding (All {features.length} Features)
             </h2>
             <p className="mt-1 text-[15px] text-muted-foreground">
-              Sorted by diagnostic point contribution (−2 to +3).{" "}
+              Sorted by diagnostic point contribution ({minFeaturePts} to +
+              {maxFeaturePts}).{" "}
               <span className="font-semibold text-[#C0504D]">
                 negative = more typical of a look-alike disease
               </span>
@@ -255,8 +260,7 @@ export default function InsightsPage() {
           <p className="text-[14px] text-muted-foreground mb-6">
             One bar per patient with a dashed median line at{" "}
             {stats.diagnostic_time_months.median} months (max{" "}
-            {stats.diagnostic_time_months.max} months /{" "}
-            {stats.diagnostic_time_months.max / 12} years).
+            {stats.diagnostic_time_months.max} months / {maxDiagYears} years).
           </p>
           <DiagnosticTimeChart />
         </motion.section>

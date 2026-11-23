@@ -52,7 +52,7 @@ export function MostFrequentChart() {
               color: "#22302E",
             }}
             formatter={(value: number, _name: string, props: { payload?: { out_of: number } }) => [
-              `${value} of ${props?.payload?.out_of ?? 19} cases`,
+              `${value} of ${props?.payload?.out_of ?? model.stats.sarcoidosis_cases} cases`,
               "Frequency",
             ]}
           />
@@ -77,8 +77,16 @@ export function PointsPerFindingChart() {
       pointLabel: f.points > 0 ? `+${f.points}` : `${f.points}`,
     }));
 
+  const minPoint = Math.min(...model.features.map((f) => f.points), -2);
+  const maxPoint = Math.max(...model.features.map((f) => f.points), 3);
+  const ticks: number[] = [];
+  for (let p = minPoint; p <= maxPoint; p++) {
+    ticks.push(p);
+  }
+  const chartHeight = Math.max(720, sortedFeatures.length * 31);
+
   return (
-    <div className="h-[720px] w-full">
+    <div style={{ height: `${chartHeight}px` }} className="w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={sortedFeatures}
@@ -88,8 +96,8 @@ export function PointsPerFindingChart() {
           <CartesianGrid strokeDasharray="3 3" stroke="#DFD9C8" horizontal={false} />
           <XAxis
             type="number"
-            domain={[-3, 4]}
-            ticks={[-2, -1, 0, 1, 2, 3]}
+            domain={[minPoint - 1, maxPoint + 1]}
+            ticks={ticks}
             tick={{ fill: "#6B7876", fontSize: 12 }}
             stroke="#DFD9C8"
           />
@@ -199,7 +207,8 @@ export function DiagnosticTimeChart() {
           <CartesianGrid strokeDasharray="3 3" stroke="#DFD9C8" vertical={false} />
           <XAxis
             dataKey="patient"
-            tick={{ fill: "#22302E", fontSize: 12 }}
+            interval="preserveStartEnd"
+            tick={{ fill: "#22302E", fontSize: 11 }}
             stroke="#DFD9C8"
           />
           <YAxis

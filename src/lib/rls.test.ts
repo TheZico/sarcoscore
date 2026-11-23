@@ -2,6 +2,12 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { middleware } from "@/middleware";
 import {
+  GET as getOverridesApi,
+  POST as postOverrideApi,
+  DELETE as deleteOverridesApi,
+} from "@/app/api/scoring-overrides/route";
+import { mergeModelWithOverrides, score } from "./scoring";
+import {
   canAccessFeature,
   canUseQuickCalculator,
   assertQuickCalculatorAccess,
@@ -20,6 +26,7 @@ import {
   createPatientFile,
   addClinicalVisit,
   listImportedCases,
+  listResearchPatientCases,
   submitImportedResearchCase,
   submitManualResearchCase,
   updateImportedCaseStatus,
@@ -29,6 +36,10 @@ import {
   deleteUserAccount,
   addOrUpdateMedicalListItem,
   updateLabRangeConfig,
+  getEffectiveScoringConfig,
+  saveSymptomOverride,
+  saveLabOverride,
+  resetScoringOverridesToModelDefaults,
   listRecentAuditChanges,
   getPatientMyHealthResults,
   exportDatabaseBackup,
@@ -294,6 +305,13 @@ describe("SarcoScore Auth, Roles, Row Level Security (RLS) & Security Hardening"
     );
     expect(adminApproved.status).toBe("approved");
 
+    // Researcher sees all 46 Published Cohort cases from SarcoScore_Model_v2 alongside clinic visits & pending imports
+    const researchTable = listResearchPatientCases(researcher);
+    const publishedCohort = researchTable.filter(
+      (c) => c.source === "Published Cohort"
+    );
+    expect(publishedCohort).toHaveLength(46);
+
     // Researcher is still blocked from clinical Dashboard/Patient files and System Management
     expect(() => listPatientsForDashboard(researcher)).toThrow(RLSViolationError);
     expect(() => getPatientRecordById(researcher, "pat-1001")).toThrow(
@@ -503,7 +521,15 @@ describe("SarcoScore Auth, Roles, Row Level Security (RLS) & Security Hardening"
     const res = restoreDatabaseFromBackup(admin, backupJson);
     expect(res.restoredPatients).toBeGreaterThanOrEqual(10);
 
-    // Visit creation sanitizes clinical notes and ignores invalid lab numbers
+    // Visit creation sanitizes clinical notes, stores current modelVersion, and does NOT recalculate existing visits
+    const existingVisitsBefore = listVisitsForPatient(doctor, "pat-1001").map(
+      (v) => ({
+        id: v.id,
+        total: v.total,
+        probability: v.probability,
+        modelVersion: v.modelVersion,
+      })
+    );
     const visit = addClinicalVisit(doctor, {
       patientId: "pat-1001",
       symptoms: ["dry_cough", "dry_cough"],
@@ -512,6 +538,15 @@ describe("SarcoScore Auth, Roles, Row Level Security (RLS) & Security Hardening"
       clinicalNotes: "Follow-up visit <script>evil()</script>",
     });
     expect(visit.clinicalNotes).not.toContain("<script>");
+    expect(visit.modelVersion).toBe("2026-11-20");
+
+    const visitsAfter = listVisitsForPatient(doctor, "pat-1001");
+    for (const prev of existingVisitsBefore) {
+      const same = visitsAfter.find((v) => v.id === prev.id);
+      expect(same?.total).toBe(prev.total);
+      expect(same?.probability).toBe(prev.probability);
+      expect(same?.modelVersion).toBe(prev.modelVersion);
+    }
 
     // Rate limiting blocks brute-force login after 5 failed attempts
     for (let i = 0; i < 5; i++) {
@@ -522,5 +557,159 @@ describe("SarcoScore Auth, Roles, Row Level Security (RLS) & Security Hardening"
     expect(() =>
       authenticateWithEmailPassword("doctor@sarcoscore.demo", "wrong-pass")
     ).toThrow(RateLimitError);
+  });
+
+  it("enforces Admin-only scoring overrides via API and RLS, server validation, audit logging, visit versioning, and model-change warning", async () => {
+    const admin = authenticateWithEmailPassword("admin@sarcoscore.demo", "demo1234");
+    const doctor = authenticateWithEmailPassword("doctor@sarcoscore.demo", "demo1234");
+    const patient = authenticateWithEmailPassword("patient@sarcoscore.demo", "demo1234");
+
+    // 1. Direct API permission tests: Doctor & Patient trying to change or reset overrides are rejected (403)
+    const doctorPost = await postOverrideApi(
+      new NextRequest("http://localhost:3000/api/scoring-overrides", {
+        method: "POST",
+        headers: {
+          cookie: "sarcoscore_role=doctor",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          itemType: "symptom",
+          itemId: "dry_cough",
+          points: 4,
+        }),
+      })
+    );
+    expect(doctorPost.status).toBe(403);
+
+    const patientPost = await postOverrideApi(
+      new NextRequest("http://localhost:3000/api/scoring-overrides", {
+        method: "POST",
+        headers: {
+          cookie: "sarcoscore_role=patient",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          itemType: "lab",
+          itemId: "ace",
+          low: 8,
+          high: 40,
+          max_points: 5,
+        }),
+      })
+    );
+    expect(patientPost.status).toBe(403);
+
+    const doctorDelete = await deleteOverridesApi(
+      new NextRequest("http://localhost:3000/api/scoring-overrides", {
+        method: "DELETE",
+        headers: { cookie: "sarcoscore_role=doctor" },
+      })
+    );
+    expect(doctorDelete.status).toBe(403);
+
+    // Other authenticated roles CAN read overrides via GET
+    const doctorGet = await getOverridesApi(
+      new NextRequest("http://localhost:3000/api/scoring-overrides", {
+        headers: { cookie: "sarcoscore_role=doctor" },
+      })
+    );
+    expect(doctorGet.status).toBe(200);
+
+    // 2. Server-side validation rejects out-of-range or decimal symptom points and invalid lab ranges
+    expect(() => saveSymptomOverride(admin, "dry_cough", -3)).toThrow(ValidationError);
+    expect(() => saveSymptomOverride(admin, "dry_cough", 6)).toThrow(ValidationError);
+    expect(() => saveSymptomOverride(admin, "dry_cough", 2.5)).toThrow(ValidationError);
+    expect(() =>
+      saveLabOverride(admin, "ace", { low: 52, high: 52, max_points: 5 })
+    ).toThrow(ValidationError);
+    expect(() =>
+      saveLabOverride(admin, "ace", { low: 60, high: 52, max_points: 5 })
+    ).toThrow(ValidationError);
+    expect(() =>
+      saveLabOverride(admin, "ace", { low: 8, high: 52, max_points: -1 })
+    ).toThrow(ValidationError);
+    expect(() =>
+      saveLabOverride(admin, "ace", { low: 8, high: 52, max_points: 1.5 })
+    ).toThrow(ValidationError);
+
+    // 3. Admin saves symptom + lab overrides via API -> applied on top of model.json without modifying plain model.json
+    const adminSymPost = await postOverrideApi(
+      new NextRequest("http://localhost:3000/api/scoring-overrides", {
+        method: "POST",
+        headers: {
+          cookie: "sarcoscore_role=admin",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          itemType: "symptom",
+          itemId: "dry_cough",
+          points: 5,
+        }),
+      })
+    );
+    expect(adminSymPost.status).toBe(200);
+
+    const effective = getEffectiveScoringConfig();
+    expect(effective.hasOverrides).toBe(true);
+    expect(effective.scoringSettingsVersion).toMatch(/^2026-11-20\+override\.v\d+$/);
+
+    // Merged score reflects override (+5 for dry_cough), while plain score() still uses model.json (+2)
+    expect(
+      score(
+        { symptoms: ["dry_cough"], labs: {} },
+        { customFeatures: effective.features, customLabs: effective.labs }
+      ).total
+    ).toBe(5);
+    expect(score({ symptoms: ["dry_cough"], labs: {} }).total).toBe(2);
+
+    // Audit log captured who, which item, old value (+2), and new value (+5)
+    const auditAfterEdit = listRecentAuditChanges(admin);
+    expect(auditAfterEdit[0].action).toBe("UPDATE_SCORING_OVERRIDE");
+    expect(auditAfterEdit[0].target).toContain("Dry cough");
+    expect(auditAfterEdit[0].target).toContain("+2");
+    expect(auditAfterEdit[0].target).toContain("+5");
+
+    // 4. New visit saves model.version + override version; old visits are NOT recalculated
+    const oldVisitsSnapshot = listVisitsForPatient(doctor, "pat-1001").map((v) => ({
+      id: v.id,
+      total: v.total,
+      modelVersion: v.modelVersion,
+    }));
+    const newVisit = addClinicalVisit(doctor, {
+      patientId: "pat-1001",
+      symptoms: ["dry_cough"],
+      labs: {},
+      investigations: [],
+      clinicalNotes: "Visit under override settings",
+    });
+    expect(newVisit.total).toBe(5);
+    expect(newVisit.modelVersion).toBe(effective.scoringSettingsVersion);
+    const visitsNow = listVisitsForPatient(doctor, "pat-1001");
+    for (const old of oldVisitsSnapshot) {
+      const same = visitsNow.find((v) => v.id === old.id);
+      expect(same?.total).toBe(old.total);
+      expect(same?.modelVersion).toBe(old.modelVersion);
+    }
+
+    // 5. Stale override detection when model.json version changes
+    const staleCheck = mergeModelWithOverrides([
+      {
+        itemId: "dry_cough",
+        itemType: "symptom",
+        newValue: { points: 4 },
+        baseModelVersion: "2026-10-27",
+        overrideVersion: 1,
+        editedBy: admin.id,
+        editedByEmail: admin.email,
+        editedAt: "2026-10-28T00:00:00Z",
+      },
+    ]);
+    expect(staleCheck.hasStaleModelOverrides).toBe(true);
+
+    // 6. Admin reset to model defaults deletes overrides & logs RESET_SCORING_OVERRIDES
+    resetScoringOverridesToModelDefaults(admin);
+    expect(getEffectiveScoringConfig().hasOverrides).toBe(false);
+    expect(listRecentAuditChanges(admin)[0].action).toBe("RESET_SCORING_OVERRIDES");
+    expect(() => saveSymptomOverride(patient, "dry_cough", 3)).toThrow(RLSViolationError);
   });
 });

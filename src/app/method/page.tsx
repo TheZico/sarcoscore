@@ -448,12 +448,13 @@ export default function MethodPage() {
                 Limitations
               </h2>
               <p className="text-[16px] leading-relaxed text-foreground/90">
-                It&apos;s a research prototype built on{" "}
+                This is a research prototype with small-sample testing based on{" "}
                 <strong>{model.stats.total_cases}</strong> published cases. It
-                is not a diagnosis, and biopsy is still required. Percentages
-                for rarely reported findings rest on very few cases. Validation
-                with more cases is planned. When new cases are added, the team
-                regenerates the model file and the site updates from it.
+                is not a diagnosis, and biopsy is still required. Findings that
+                appear rarely in the dataset rest on very few cases, and broader
+                clinical validation with more cases is planned. When new cases
+                are added, the team regenerates the model file and the site
+                updates from it.
               </p>
             </div>
           </div>

@@ -31,10 +31,17 @@ import {
   validatePatientCreateInput,
   validateManualResearchCaseInput,
   validateResearchUploadFile,
+  validateSymptomPointsOverride,
+  validateLabRangeOverride,
 } from "@/lib/validation";
 import { checkRateLimit, resetRateLimiter } from "@/lib/security";
-import { score } from "@/lib/scoring";
+import {
+  score,
+  mergeModelWithOverrides,
+  type ScoringOverrideRecord,
+} from "@/lib/scoring";
 import model from "@/data/model.json";
+import publishedCasesData from "@/data/publishedCases.json";
 
 export interface DatabaseState {
   users: DemoUserAccount[];
@@ -42,6 +49,8 @@ export interface DatabaseState {
   visits: VisitRecord[];
   medicalLists: MedicalListItem[];
   labRanges: LabRangeItem[];
+  scoringOverrides: ScoringOverrideRecord[];
+  overrideVersion: number;
   importedCases: ImportedCaseRecord[];
   patientResults: PatientHealthResult[];
   auditLog: AuditLogEntry[];
@@ -55,6 +64,8 @@ function cloneInitialState(): DatabaseState {
       visits: SEED_VISITS,
       medicalLists: SEED_MEDICAL_LISTS,
       labRanges: SEED_LAB_RANGES,
+      scoringOverrides: [],
+      overrideVersion: 0,
       importedCases: SEED_IMPORTED_CASES,
       patientResults: SEED_PATIENT_RESULTS,
       auditLog: SEED_AUDIT_LOG,
@@ -91,14 +102,25 @@ export function loadDb(): DatabaseState {
         const raw = window.sessionStorage.getItem(NON_PII_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
+          const sameModelVersion = parsed.modelVersion === model.version;
           if (Array.isArray(parsed.importedCases)) {
             memoryState.importedCases = parsed.importedCases;
           }
-          if (Array.isArray(parsed.medicalLists)) {
+          // Re-seed medicalLists & labRanges automatically when model.json version changes,
+          // while preserving existing patients, visits (without recalculating them), and auditLog.
+          if (sameModelVersion && Array.isArray(parsed.medicalLists)) {
             memoryState.medicalLists = parsed.medicalLists;
           }
-          if (Array.isArray(parsed.labRanges)) {
+          if (sameModelVersion && Array.isArray(parsed.labRanges)) {
             memoryState.labRanges = parsed.labRanges;
+          }
+          // Preserve Admin scoringOverrides across model.json updates so the Admin
+          // receives the stale-override warning ("A new model version was loaded...").
+          if (Array.isArray(parsed.scoringOverrides)) {
+            memoryState.scoringOverrides = parsed.scoringOverrides;
+          }
+          if (typeof parsed.overrideVersion === "number") {
+            memoryState.overrideVersion = parsed.overrideVersion;
           }
           if (Array.isArray(parsed.visits)) {
             memoryState.visits = parsed.visits;
@@ -123,9 +145,12 @@ export function saveDb(next: DatabaseState): void {
       window.sessionStorage.setItem(
         NON_PII_STORAGE_KEY,
         JSON.stringify({
+          modelVersion: model.version,
           importedCases: next.importedCases,
           medicalLists: next.medicalLists,
           labRanges: next.labRanges,
+          scoringOverrides: next.scoringOverrides,
+          overrideVersion: next.overrideVersion,
           visits: next.visits,
           auditLog: next.auditLog,
         })
@@ -406,17 +431,15 @@ export function addClinicalVisit(
     throw new ValidationError("Patient ID is required to save a clinical visit.");
   }
   const db = loadDb();
+  const effective = mergeModelWithOverrides(
+    db.scoringOverrides,
+    db.overrideVersion
+  );
   const evalResult = score(
     { symptoms: input.symptoms, labs: input.labs },
     {
-      customFeatures: db.medicalLists
-        .filter((m) => m.category === "symptom")
-        .map((m) => ({
-          id: m.code,
-          label: m.name,
-          points: m.points ?? 0,
-        })),
-      customLabs: db.labRanges,
+      customFeatures: effective.features,
+      customLabs: effective.labs,
     }
   );
   const visit: VisitRecord = {
@@ -432,7 +455,7 @@ export function addClinicalVisit(
     total: evalResult.total,
     probability: evalResult.probability,
     level: evalResult.level,
-    modelVersion: model.version,
+    modelVersion: effective.scoringSettingsVersion,
   };
   db.visits = [...db.visits, visit];
   appendAudit(
@@ -633,7 +656,7 @@ export interface DeidentifiedResearchCase {
   id: string;
   caseCode: string;
   source: "Published Cohort" | "Clinic Visit" | "Pending Import";
-  age: number;
+  age: number | null;
   gender: "Female" | "Male";
   symptoms: string[];
   investigations: string[];
@@ -649,6 +672,27 @@ export function listResearchPatientCases(
   const db = loadDb();
   const results: DeidentifiedResearchCase[] = [];
 
+  // 1. All 46 de-identified published cases from SarcoScore_Model_v2 (data/cases.xlsx)
+  for (const pub of publishedCasesData.cases) {
+    const s = score({
+      symptoms: pub.symptoms,
+      labs: pub.labs as Record<string, number | undefined>,
+    });
+    results.push({
+      id: pub.id,
+      caseCode: pub.caseCode,
+      source: "Published Cohort",
+      age: pub.age,
+      gender: pub.gender === "Male" ? "Male" : "Female",
+      symptoms: pub.symptoms,
+      investigations: pub.investigations,
+      diagnosis: pub.confirmedDisease,
+      scorePct: Math.round(s.probability * 100),
+      level: s.level,
+    });
+  }
+
+  // 2. De-identified clinic patient records
   for (const pat of db.patients) {
     const visits = db.visits
       .filter((v) => v.patientId === pat.id)
@@ -811,10 +855,7 @@ export function addOrUpdateMedicalListItem(
   }
   const cleanGroup = sanitizeText(item.groupName ?? "General", 80) || "General";
   if (item.points !== undefined) {
-    const p = Number(item.points);
-    if (!Number.isFinite(p) || p < -5 || p > 10) {
-      throw new ValidationError("Symptom points must be between -5 and +10.");
-    }
+    validateSymptomPointsOverride(item.points);
   }
 
   const db = loadDb();
@@ -878,8 +919,220 @@ export function deleteMedicalListItem(
   saveDb(db);
 }
 
+export function getScoringOverrides(): ScoringOverrideRecord[] {
+  return JSON.parse(JSON.stringify(loadDb().scoringOverrides));
+}
+
+export function getEffectiveScoringConfig() {
+  const db = loadDb();
+  return mergeModelWithOverrides(db.scoringOverrides, db.overrideVersion);
+}
+
+/**
+ * Admin-only: saves a symptom point override on top of src/data/model.json.
+ * Never modifies model.json; logs who, which item, old value, new value, and time.
+ */
+export function saveSymptomOverride(
+  user: SessionUser | null,
+  symptomId: string,
+  rawPoints: unknown
+): ScoringOverrideRecord | null {
+  const verified = verifyServerAccess(user, "system_management");
+  const newPoints = validateSymptomPointsOverride(rawPoints);
+
+  const baseFeature = model.features.find((f) => f.id === symptomId);
+  if (!baseFeature) {
+    throw new ValidationError(`Unknown symptom item "${symptomId}".`);
+  }
+
+  const db = loadDb();
+  const effectiveBefore = mergeModelWithOverrides(
+    db.scoringOverrides,
+    db.overrideVersion
+  );
+  const oldFeature = effectiveBefore.features.find((f) => f.id === symptomId);
+  const oldPoints = oldFeature ? oldFeature.points : baseFeature.points;
+
+  const now = new Date().toISOString();
+  db.overrideVersion = (db.overrideVersion || 0) + 1;
+
+  let saved: ScoringOverrideRecord | null = null;
+  if (newPoints === baseFeature.points) {
+    // Matches model.json default -> remove override entry
+    db.scoringOverrides = db.scoringOverrides.filter(
+      (o) => !(o.itemType === "symptom" && o.itemId === symptomId)
+    );
+  } else {
+    saved = {
+      itemId: symptomId,
+      itemType: "symptom",
+      newValue: { points: newPoints },
+      baseModelVersion: model.version,
+      overrideVersion: db.overrideVersion,
+      editedBy: verified.id,
+      editedByEmail: verified.email,
+      editedAt: now,
+    };
+    db.scoringOverrides = [
+      ...db.scoringOverrides.filter(
+        (o) => !(o.itemType === "symptom" && o.itemId === symptomId)
+      ),
+      saved,
+    ];
+  }
+
+  // Keep medicalLists symptom view in sync
+  const mlSym = db.medicalLists.find(
+    (m) => m.category === "symptom" && m.code === symptomId
+  );
+  if (mlSym) {
+    mlSym.points = newPoints;
+    mlSym.updatedAt = now;
+  }
+
+  appendAudit(
+    db,
+    verified,
+    "UPDATE_SCORING_OVERRIDE",
+    `Changed "${baseFeature.label}" points from ${oldPoints > 0 ? `+${oldPoints}` : oldPoints} to ${newPoints > 0 ? `+${newPoints}` : newPoints} (model default: ${baseFeature.points > 0 ? `+${baseFeature.points}` : baseFeature.points})`
+  );
+  saveDb(db);
+  return saved;
+}
+
+/**
+ * Admin-only: saves a lab range override on top of src/data/model.json.
+ * Never modifies model.json; logs who, which item, old value, new value, and time.
+ */
+export function saveLabOverride(
+  user: SessionUser | null,
+  labId: string,
+  updates: { low: unknown; high: unknown; max_points: unknown }
+): ScoringOverrideRecord | null {
+  const verified = verifyServerAccess(user, "system_management");
+  const clean = validateLabRangeOverride(updates);
+
+  const baseLab = model.labs.find((l) => l.id === labId);
+  if (!baseLab) {
+    throw new ValidationError(`Unknown lab test "${labId}".`);
+  }
+
+  const db = loadDb();
+  const effectiveBefore = mergeModelWithOverrides(
+    db.scoringOverrides,
+    db.overrideVersion
+  );
+  const oldLab = effectiveBefore.labs.find((l) => l.id === labId) ?? baseLab;
+
+  const now = new Date().toISOString();
+  db.overrideVersion = (db.overrideVersion || 0) + 1;
+
+  let saved: ScoringOverrideRecord | null = null;
+  if (
+    clean.low === baseLab.low &&
+    clean.high === baseLab.high &&
+    clean.max_points === baseLab.max_points
+  ) {
+    db.scoringOverrides = db.scoringOverrides.filter(
+      (o) => !(o.itemType === "lab" && o.itemId === labId)
+    );
+  } else {
+    saved = {
+      itemId: labId,
+      itemType: "lab",
+      newValue: {
+        low: clean.low,
+        high: clean.high,
+        max_points: clean.max_points,
+      },
+      baseModelVersion: model.version,
+      overrideVersion: db.overrideVersion,
+      editedBy: verified.id,
+      editedByEmail: verified.email,
+      editedAt: now,
+    };
+    db.scoringOverrides = [
+      ...db.scoringOverrides.filter(
+        (o) => !(o.itemType === "lab" && o.itemId === labId)
+      ),
+      saved,
+    ];
+  }
+
+  const labEntry = db.labRanges.find((l) => l.id === labId);
+  if (labEntry) {
+    labEntry.low = clean.low;
+    labEntry.high = clean.high;
+    labEntry.max_points = clean.max_points;
+    labEntry.updatedAt = now;
+  }
+
+  appendAudit(
+    db,
+    verified,
+    "UPDATE_LAB_OVERRIDE",
+    `Changed "${baseLab.label}" from ${oldLab.low}-${oldLab.high} ${baseLab.unit} (max +${oldLab.max_points}) to ${clean.low}-${clean.high} ${baseLab.unit} (max +${clean.max_points})`
+  );
+  saveDb(db);
+  return saved;
+}
+
+/**
+ * Admin-only: deletes all scoring overrides and restores model.json defaults.
+ * Does NOT recalculate old visits.
+ */
+export function resetScoringOverridesToModelDefaults(
+  user: SessionUser | null
+): void {
+  const verified = verifyServerAccess(user, "system_management");
+  const db = loadDb();
+  const removedCount = db.scoringOverrides.length;
+  const now = new Date().toISOString();
+
+  db.scoringOverrides = [];
+  db.overrideVersion = 0;
+
+  // Restore labRanges and medicalLists symptom weights to model.json defaults
+  for (const baseLab of model.labs) {
+    const labEntry = db.labRanges.find((l) => l.id === baseLab.id);
+    if (labEntry) {
+      labEntry.low = baseLab.low;
+      labEntry.high = baseLab.high;
+      labEntry.max_points = baseLab.max_points;
+      labEntry.updatedAt = now;
+    }
+  }
+  for (const baseFeat of model.features) {
+    const mlSym = db.medicalLists.find(
+      (m) => m.category === "symptom" && m.code === baseFeat.id
+    );
+    if (mlSym) {
+      mlSym.points = baseFeat.points;
+      mlSym.updatedAt = now;
+    }
+  }
+
+  appendAudit(
+    db,
+    verified,
+    "RESET_SCORING_OVERRIDES",
+    `Reset ${removedCount} scoring override(s) back to model.json defaults (v${model.version})`
+  );
+  saveDb(db);
+}
+
 export function getLabRanges(): LabRangeItem[] {
-  return [...loadDb().labRanges];
+  const effective = getEffectiveScoringConfig();
+  return effective.labs.map((l) => ({
+    id: l.id,
+    label: l.label,
+    unit: l.unit,
+    low: l.low,
+    high: l.high,
+    direction: l.direction,
+    max_points: l.max_points,
+    updatedAt: `${model.version}T00:00:00Z`,
+  }));
 }
 
 export function updateLabRangeConfig(
@@ -887,39 +1140,10 @@ export function updateLabRangeConfig(
   labId: string,
   updates: { low: number; high: number; max_points: number }
 ): LabRangeItem {
-  const verified = verifyServerAccess(user, "system_management");
-  const low = Number(updates.low);
-  const high = Number(updates.high);
-  const maxPoints = Number(updates.max_points);
-  if (
-    !Number.isFinite(low) ||
-    !Number.isFinite(high) ||
-    low < 0 ||
-    high <= low
-  ) {
-    throw new ValidationError(
-      "Normal high threshold must be greater than normal low (>= 0)."
-    );
-  }
-  if (!Number.isFinite(maxPoints) || maxPoints < 0 || maxPoints > 10) {
-    throw new ValidationError("Max points must be between 0 and 10.");
-  }
-
-  const db = loadDb();
-  const lab = db.labRanges.find((l) => l.id === labId);
-  if (!lab) throw new Error("Lab test not found.");
-  lab.low = low;
-  lab.high = high;
-  lab.max_points = Math.round(maxPoints);
-  lab.updatedAt = new Date().toISOString();
-  appendAudit(
-    db,
-    verified,
-    "UPDATE_LAB_RANGE",
-    `Updated ${lab.label}: normal ${lab.low}-${lab.high} ${lab.unit}, max +${lab.max_points} pts`
-  );
-  saveDb(db);
-  return lab;
+  saveLabOverride(user, labId, updates);
+  const updated = getLabRanges().find((l) => l.id === labId);
+  if (!updated) throw new Error("Lab test not found.");
+  return updated;
 }
 
 export function listRecentAuditChanges(

@@ -24,6 +24,7 @@ import {
   getLabRanges,
 } from "@/lib/db";
 import model from "@/data/model.json";
+import publishedCasesData from "@/data/publishedCases.json";
 import {
   MostFrequentChart,
   PointsPerFindingChart,
@@ -60,17 +61,8 @@ const PREFERRED_GROUP_ORDER = [
   "Imaging & tests",
 ];
 
-const FREQUENT_EXAMINATIONS_DATA = [
-  { exam: "Chest CT / HRCT", count: 24, displayLabel: "24 of 30" },
-  { exam: "Tissue Biopsy (Granulomas)", count: 22, displayLabel: "22 of 30" },
-  { exam: "Chest X-ray", count: 21, displayLabel: "21 of 30" },
-  { exam: "Serum ACE Level", count: 19, displayLabel: "19 of 30" },
-  { exam: "CRP & ESR", count: 18, displayLabel: "18 of 30" },
-  { exam: "CBC & Lymphocyte Count", count: 17, displayLabel: "17 of 30" },
-  { exam: "Serum Calcium & ALP", count: 15, displayLabel: "15 of 30" },
-  { exam: "ECG / Echocardiogram / CMR", count: 11, displayLabel: "11 of 30" },
-  { exam: "TB Gold / TST Rule-out", count: 10, displayLabel: "10 of 30" },
-];
+const FREQUENT_EXAMINATIONS_DATA =
+  publishedCasesData.examinationFrequencies.slice(0, 10);
 
 function levelColorHex(level: string): string {
   if (level === "High") return "#C0504D";
@@ -95,7 +87,7 @@ export default function ResearchPage() {
     "upload"
   );
   const [sourceFilter, setSourceFilter] = useState<
-    "ALL" | "Clinic Visit" | "Pending Import"
+    "ALL" | "Published Cohort" | "Clinic Visit" | "Pending Import"
   >("ALL");
 
   // Option 1: "Upload file" state (Excel or PDF only — no manual fields needed)
@@ -109,7 +101,9 @@ export default function ResearchPage() {
   const [stagedLocalFile, setStagedLocalFile] = useState<string | null>(null);
 
   // Option 2: "Enter manually" state (no file upload needed)
-  const [manualCaseCode, setManualCaseCode] = useState("LIT-2026-33");
+  const [manualCaseCode, setManualCaseCode] = useState(
+    `LIT-2026-${model.stats.total_cases + 1}`
+  );
   const [manualAge, setManualAge] = useState("48");
   const [manualDiagMonths, setManualDiagMonths] = useState("6");
   const [manualConfirmedDisease, setManualConfirmedDisease] =
@@ -283,7 +277,7 @@ export default function ResearchPage() {
         testValues: combinedTests,
       });
       setLastUploadedId(created.id);
-      const nextNum = importedCases.length + 32;
+      const nextNum = model.stats.total_cases + importedCases.length + 2;
       setManualCaseCode(`LIT-2026-${nextNum}`);
       setNotice(
         `Saved manual case "${created.caseSummary.caseCode}" with status "pending review". Live scoring model (${model.version}) remains unchanged until approved.`
@@ -334,7 +328,7 @@ export default function ResearchPage() {
     const rows = filteredResearchCases.map((c) => [
       c.caseCode,
       c.source,
-      String(c.age),
+      c.age !== null ? String(c.age) : "",
       c.gender,
       `"${c.symptoms.join("; ")}"`,
       `"${c.investigations.join("; ")}"`,
@@ -943,7 +937,7 @@ export default function ResearchPage() {
                 </h2>
                 <p className="text-[14px] text-muted-foreground mb-4">
                   Diagnostic imaging, biopsy, cardiac, and laboratory workup
-                  performed across the 30-case sample.
+                  performed across the {model.stats.total_cases}-case dataset.
                 </p>
                 <div className="h-[390px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -959,7 +953,7 @@ export default function ResearchPage() {
                       />
                       <XAxis
                         type="number"
-                        domain={[0, 30]}
+                        domain={[0, model.stats.total_cases]}
                         tick={{ fill: "#6B7876", fontSize: 12 }}
                         stroke="#DFD9C8"
                       />
@@ -1083,6 +1077,10 @@ export default function ResearchPage() {
                 {(
                   [
                     { id: "ALL", label: "All" },
+                    {
+                      id: "Published Cohort",
+                      label: `Published Cohort (${publishedCasesData.totalCases})`,
+                    },
                     { id: "Pending Import", label: "Research Imports" },
                     { id: "Clinic Visit", label: "Clinic" },
                   ] as const
@@ -1138,7 +1136,7 @@ export default function ResearchPage() {
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
-                        {c.age} yrs · {c.gender}
+                        {c.age !== null ? `${c.age} yrs` : "—"} · {c.gender}
                       </td>
                       <td className="py-3.5 px-4 text-[13px] text-foreground max-w-[240px]">
                         {c.symptoms

@@ -23,7 +23,7 @@ import {
   updatePatientPersonalAndDiagnosis,
   addClinicalVisit,
   getMedicalLists,
-  getLabRanges,
+  getEffectiveScoringConfig,
 } from "@/lib/db";
 import model from "@/data/model.json";
 import { score } from "@/lib/scoring";
@@ -119,7 +119,8 @@ function PatientProfileContent() {
   const latestVisit = visits.length > 0 ? visits[visits.length - 1] : undefined;
 
   const medicalLists = getMedicalLists();
-  const labRanges = getLabRanges();
+  const effectiveScoring = getEffectiveScoringConfig();
+  const labRanges = effectiveScoring.labs;
 
   // Editable personal info + recorded diagnosis state
   const [editingInfo, setEditingInfo] = useState(false);
@@ -153,22 +154,8 @@ function PatientProfileContent() {
   ]);
   const [visitNotes, setVisitNotes] = useState("");
 
-  // Dynamic symptom groups from medicalLists (falling back to model.features)
-  const symptomFeatures = useMemo(() => {
-    const customSymptoms = medicalLists.filter((m) => m.category === "symptom");
-    if (customSymptoms.length === 0) return model.features;
-    return customSymptoms.map((s) => {
-      const base = model.features.find((f) => f.id === s.code);
-      return {
-        id: s.code,
-        label: s.name,
-        group: s.groupName || base?.group || "General",
-        points: s.points ?? base?.points ?? 0,
-        pct_sarcoidosis: base?.pct_sarcoidosis ?? null,
-        pct_other: base?.pct_other ?? null,
-      };
-    });
-  }, [medicalLists]);
+  // Merged symptom features (model.json + Admin overrides) — matches Quick Calculator
+  const symptomFeatures = effectiveScoring.features;
 
   const groupedFeatures = useMemo(() => {
     const groupsMap = new Map<string, typeof symptomFeatures>();
@@ -268,7 +255,7 @@ function PatientProfileContent() {
     setIsSavingVisit(true);
     setErrorNotice(null);
     try {
-      addClinicalVisit(user, {
+      const savedVisit = addClinicalVisit(user, {
         patientId: patient.id,
         symptoms: selectedSymptoms,
         labs: numericLabs,
@@ -282,7 +269,7 @@ function PatientProfileContent() {
       setLabStrings({});
       setVisitNotes("");
       setSavedNotice(
-        `New clinical visit saved with model version ${model.version}.`
+        `New clinical visit saved with scoring version ${savedVisit.modelVersion}.`
       );
       triggerRefresh();
     } catch (err) {

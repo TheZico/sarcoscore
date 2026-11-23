@@ -7,7 +7,54 @@ export type Input = {
 };
 export type Item = { label: string; points: number };
 
+export interface SymptomOverrideValue {
+  points: number;
+}
+
+export interface LabOverrideValue {
+  low: number;
+  high: number;
+  max_points: number;
+}
+
+export interface ScoringOverrideRecord {
+  itemId: string;
+  itemType: "symptom" | "lab";
+  newValue: SymptomOverrideValue | LabOverrideValue;
+  baseModelVersion: string;
+  overrideVersion: number;
+  editedBy: string;
+  editedByEmail: string;
+  editedAt: string;
+}
+
+export interface MergedFeature {
+  id: string;
+  label: string;
+  group: string;
+  points: number;
+  defaultPoints: number;
+  isOverridden: boolean;
+  pct_sarcoidosis: number | null;
+  pct_other: number | null;
+}
+
+export interface MergedLab {
+  id: string;
+  label: string;
+  unit: string;
+  low: number;
+  high: number;
+  direction: "high" | "low";
+  max_points: number;
+  defaultLow: number;
+  defaultHigh: number;
+  defaultMaxPoints: number;
+  isOverridden: boolean;
+}
+
 export interface CustomScoringOptions {
+  overrides?: ScoringOverrideRecord[];
   customFeatures?: { id: string; label: string; points: number }[];
   customLabs?: {
     id: string;
@@ -18,6 +65,89 @@ export interface CustomScoringOptions {
     direction: string;
     max_points: number;
   }[];
+}
+
+/**
+ * Merges default values from src/data/model.json with Admin scoring overrides.
+ * Never mutates model.json.
+ */
+export function mergeModelWithOverrides(
+  overrides: ScoringOverrideRecord[] = [],
+  overrideVersion = 0
+): {
+  features: MergedFeature[];
+  labs: MergedLab[];
+  hasOverrides: boolean;
+  hasStaleModelOverrides: boolean;
+  overrideVersion: number;
+  scoringSettingsVersion: string;
+} {
+  const symMap = new Map<string, SymptomOverrideValue>();
+  const labMap = new Map<string, LabOverrideValue>();
+
+  for (const ov of overrides) {
+    if (ov.itemType === "symptom") {
+      symMap.set(ov.itemId, ov.newValue as SymptomOverrideValue);
+    } else if (ov.itemType === "lab") {
+      labMap.set(ov.itemId, ov.newValue as LabOverrideValue);
+    }
+  }
+
+  const features: MergedFeature[] = model.features.map((f) => {
+    const ov = symMap.get(f.id);
+    const points = ov ? ov.points : f.points;
+    return {
+      id: f.id,
+      label: f.label,
+      group: f.group,
+      points,
+      defaultPoints: f.points,
+      isOverridden: Boolean(ov),
+      pct_sarcoidosis: f.pct_sarcoidosis,
+      pct_other: f.pct_other,
+    };
+  });
+
+  const labs: MergedLab[] = model.labs.map((l) => {
+    const ov = labMap.get(l.id);
+    return {
+      id: l.id,
+      label: l.label,
+      unit: l.unit,
+      low: ov ? ov.low : l.low,
+      high: ov ? ov.high : l.high,
+      direction: l.direction as "high" | "low",
+      max_points: ov ? ov.max_points : l.max_points,
+      defaultLow: l.low,
+      defaultHigh: l.high,
+      defaultMaxPoints: l.max_points,
+      isOverridden: Boolean(ov),
+    };
+  });
+
+  const hasOverrides = overrides.length > 0;
+  const maxVersionInRecords = overrides.reduce(
+    (max, o) => Math.max(max, o.overrideVersion || 0),
+    0
+  );
+  const effectiveOverrideVersion = hasOverrides
+    ? Math.max(overrideVersion, maxVersionInRecords, 1)
+    : 0;
+  const hasStaleModelOverrides = overrides.some(
+    (o) => o.baseModelVersion !== model.version
+  );
+  const scoringSettingsVersion = hasOverrides
+    ? `${model.version}+override.v${effectiveOverrideVersion}`
+    : model.version;
+
+  return {
+    features,
+    labs,
+    hasOverrides,
+    hasStaleModelOverrides,
+    overrideVersion: effectiveOverrideVersion,
+    scoringSettingsVersion,
+  };
 }
 
 // Python-style rounding (round half to even) so results match the Python model exactly.
@@ -34,7 +164,13 @@ export function labPoints(
   const labsSource = customLabs ?? model.labs;
   const lab =
     labsSource.find((l) => l.id === id) ?? model.labs.find((l) => l.id === id);
-  if (!lab || typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 100_000) {
+  if (
+    !lab ||
+    typeof value !== "number" ||
+    !Number.isFinite(value) ||
+    value < 0 ||
+    value > 100_000
+  ) {
     return { points: 0, status: "Normal", ratio: 0 };
   }
   const ratio =
@@ -57,8 +193,14 @@ export function labPoints(
 }
 
 export function score(input: Input, options?: CustomScoringOptions) {
-  const featuresSource = options?.customFeatures ?? model.features;
-  const labsSource = options?.customLabs ?? model.labs;
+  const merged =
+    options?.overrides && options.overrides.length > 0
+      ? mergeModelWithOverrides(options.overrides)
+      : null;
+
+  const featuresSource =
+    options?.customFeatures ?? merged?.features ?? model.features;
+  const labsSource = options?.customLabs ?? merged?.labs ?? model.labs;
 
   const items: Item[] = [];
   const uniqueSymptoms = Array.from(new Set(input.symptoms ?? []));

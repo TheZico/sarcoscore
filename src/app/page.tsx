@@ -47,7 +47,9 @@ export default function HomePage() {
       : "#2E8B57";
 
   const medianMonths = model.stats.diagnostic_time_months.median;
-  const maxYears = model.stats.diagnostic_time_months.max / 12;
+  const maxYears = Number(
+    (model.stats.diagnostic_time_months.max / 12).toFixed(1)
+  );
   const lookalikeCount = model.stats.lookalike_diseases.length;
 
   return (
@@ -321,7 +323,7 @@ export default function HomePage() {
         </div>
       </motion.section>
 
-      {/* 3. HOW DATA WAS COLLECTED FROM PUBMED & GOOGLE SCHOLAR (30 CASES) */}
+      {/* 3. HOW DATA WAS COLLECTED FROM PUBMED & GOOGLE SCHOLAR */}
       <motion.section
         {...fadeUpSection}
         className="mx-auto max-w-[1140px] px-5 py-16 md:px-10 md:py-20 lg:px-16 border-t border-border"

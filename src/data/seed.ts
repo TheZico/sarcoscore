@@ -477,8 +477,10 @@ export const SEED_VISITS: VisitRecord[] = [
   }),
 ];
 
+const MODEL_UPDATED_AT = `${model.version}T00:00:00Z`;
+
 export const SEED_MEDICAL_LISTS: MedicalListItem[] = [
-  // All 23 symptoms/findings seeded directly from model.json
+  // All symptoms/findings seeded directly from model.json
   ...model.features.map((f) => ({
     id: `sym-${f.id}`,
     category: "symptom" as const,
@@ -486,7 +488,7 @@ export const SEED_MEDICAL_LISTS: MedicalListItem[] = [
     name: f.label,
     groupName: f.group,
     points: f.points,
-    updatedAt: "2026-10-27T00:00:00Z",
+    updatedAt: MODEL_UPDATED_AT,
   })),
   // Investigations from Methodology Fig. (2)
   {
@@ -613,7 +615,7 @@ export const SEED_LAB_RANGES: LabRangeItem[] = model.labs.map((lab) => ({
   high: lab.high,
   direction: lab.direction as "high" | "low",
   max_points: lab.max_points,
-  updatedAt: "2026-10-27T00:00:00Z",
+  updatedAt: MODEL_UPDATED_AT,
 }));
 
 export const SEED_IMPORTED_CASES: ImportedCaseRecord[] = [
@@ -735,8 +737,8 @@ export const SEED_AUDIT_LOG: AuditLogEntry[] = [
     userEmail: "admin@sarcoscore.demo",
     userRole: "admin",
     action: "SEED_MODEL_RANGES",
-    target: "Initialized scoring model v2026-10-27 (23 findings, 8 lab ranges)",
-    at: "2026-10-27T09:00:00Z",
+    target: `Initialized scoring model v${model.version} (${model.features.length} findings, ${model.labs.length} lab ranges)`,
+    at: `${model.version}T09:00:00Z`,
   },
   {
     id: "aud-02",

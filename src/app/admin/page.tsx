@@ -13,13 +13,19 @@ import {
   getMedicalLists,
   addOrUpdateMedicalListItem,
   deleteMedicalListItem,
-  getLabRanges,
-  updateLabRangeConfig,
+  getEffectiveScoringConfig,
+  saveSymptomOverride,
+  saveLabOverride,
+  resetScoringOverridesToModelDefaults,
   listRecentAuditChanges,
   exportDatabaseBackup,
   restoreDatabaseFromBackup,
   resetDbToSeed,
 } from "@/lib/db";
+import {
+  validateSymptomPointsOverride,
+  validateLabRangeOverride,
+} from "@/lib/validation";
 import {
   Users,
   ClipboardList,
@@ -71,7 +77,7 @@ export default function SystemManagementPage() {
   const isAdmin = user?.role === "admin";
   const accounts = isAdmin ? listUserAccounts(user) : [];
   const medicalLists = isAdmin ? getMedicalLists() : [];
-  const labRanges = isAdmin ? getLabRanges() : [];
+  const effectiveScoring = isAdmin ? getEffectiveScoringConfig() : null;
   const auditLogs = isAdmin ? listRecentAuditChanges(user) : [];
 
   // --------------------------------------------------------------------------
@@ -191,7 +197,7 @@ export default function SystemManagementPage() {
   };
 
   // --------------------------------------------------------------------------
-  // SECTION 3: SCORING & LAB RANGES STATE
+  // SECTION 3: SCORING & LAB RANGES STATE (OVERRIDES LAYERED ON model.json)
   // --------------------------------------------------------------------------
   const [labEdits, setLabEdits] = useState<
     Record<string, { low: string; high: string; max_points: string }>
@@ -199,14 +205,35 @@ export default function SystemManagementPage() {
   const [symptomPointEdits, setSymptomPointEdits] = useState<
     Record<string, string>
   >({});
+  const [pendingOverrideConfirm, setPendingOverrideConfirm] = useState<
+    | {
+        kind: "lab";
+        itemId: string;
+        itemLabel: string;
+        oldText: string;
+        newText: string;
+        payload: { low: number; high: number; max_points: number };
+      }
+    | {
+        kind: "symptom";
+        itemId: string;
+        itemLabel: string;
+        oldText: string;
+        newText: string;
+        points: number;
+      }
+    | null
+  >(null);
+  const [confirmResetOverridesOpen, setConfirmResetOverridesOpen] =
+    useState(false);
 
-  useEffect(() => {
-    if (!isAdmin) return;
+  const syncScoringEditFields = useCallback(() => {
+    const cfg = getEffectiveScoringConfig();
     const nextLabs: Record<
       string,
       { low: string; high: string; max_points: string }
     > = {};
-    for (const l of getLabRanges()) {
+    for (const l of cfg.labs) {
       nextLabs[l.id] = {
         low: String(l.low),
         high: String(l.high),
@@ -216,52 +243,159 @@ export default function SystemManagementPage() {
     setLabEdits(nextLabs);
 
     const nextSym: Record<string, string> = {};
-    for (const m of getMedicalLists().filter((x) => x.category === "symptom")) {
-      nextSym[m.id] = String(m.points ?? 0);
+    for (const f of cfg.features) {
+      nextSym[f.id] = String(f.points);
     }
     setSymptomPointEdits(nextSym);
-  }, [isAdmin]);
+  }, []);
 
-  const handleSaveLabRange = (labId: string) => {
+  useEffect(() => {
+    if (!isAdmin) return;
+    syncScoringEditFields();
+  }, [isAdmin, syncScoringEditFields]);
+
+  const handleRequestSaveLabRange = (labId: string) => {
     setError(null);
     setNotice(null);
     const edit = labEdits[labId];
-    if (!edit) return;
+    const currentLab = effectiveScoring?.labs.find((l) => l.id === labId);
+    if (!edit || !currentLab) return;
     try {
-      const updated = updateLabRangeConfig(user, labId, {
-        low: Number.parseFloat(edit.low),
-        high: Number.parseFloat(edit.high),
-        max_points: Number.parseInt(edit.max_points, 10),
+      const validated = validateLabRangeOverride({
+        low: edit.low,
+        high: edit.high,
+        max_points: edit.max_points,
       });
-      setNotice(
-        `Updated ${updated.label} normal range (${updated.low}–${updated.high} ${updated.unit}, max +${updated.max_points} pts).`
-      );
-      refresh();
+      setPendingOverrideConfirm({
+        kind: "lab",
+        itemId: labId,
+        itemLabel: currentLab.label,
+        oldText: `${currentLab.low}–${currentLab.high} ${currentLab.unit}, max +${currentLab.max_points} pts`,
+        newText: `${validated.low}–${validated.high} ${currentLab.unit}, max +${validated.max_points} pts`,
+        payload: validated,
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update lab range.");
+      setError(
+        err instanceof Error ? err.message : "Invalid lab range values."
+      );
     }
   };
 
-  const handleSaveSymptomPoints = (item: (typeof medicalLists)[0]) => {
+  const handleRequestSaveSymptomPoints = (symptomId: string) => {
     setError(null);
     setNotice(null);
-    const rawPts = symptomPointEdits[item.id] ?? String(item.points ?? 0);
+    const currentSym = effectiveScoring?.features.find(
+      (f) => f.id === symptomId
+    );
+    if (!currentSym) return;
+    const rawPts = symptomPointEdits[symptomId] ?? String(currentSym.points);
     try {
-      const updated = addOrUpdateMedicalListItem(user, {
-        id: item.id,
-        category: "symptom",
-        name: item.name,
-        groupName: item.groupName,
-        points: Number.parseInt(rawPts, 10) || 0,
+      const validatedPoints = validateSymptomPointsOverride(rawPts);
+      const fmt = (n: number) => (n > 0 ? `+${n}` : String(n));
+      setPendingOverrideConfirm({
+        kind: "symptom",
+        itemId: symptomId,
+        itemLabel: currentSym.label,
+        oldText: `${fmt(currentSym.points)} pts`,
+        newText: `${fmt(validatedPoints)} pts`,
+        points: validatedPoints,
       });
-      setNotice(
-        `Updated score weight for "${updated.name}" to ${
-          (updated.points ?? 0) > 0 ? `+${updated.points}` : updated.points
-        } pts.`
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Invalid symptom point value."
       );
+    }
+  };
+
+  const handleConfirmPendingOverride = async () => {
+    if (!pendingOverrideConfirm) return;
+    setError(null);
+    setNotice(null);
+    try {
+      const apiBody =
+        pendingOverrideConfirm.kind === "lab"
+          ? {
+              itemType: "lab",
+              itemId: pendingOverrideConfirm.itemId,
+              low: pendingOverrideConfirm.payload.low,
+              high: pendingOverrideConfirm.payload.high,
+              max_points: pendingOverrideConfirm.payload.max_points,
+            }
+          : {
+              itemType: "symptom",
+              itemId: pendingOverrideConfirm.itemId,
+              points: pendingOverrideConfirm.points,
+            };
+
+      const res = await fetch("/api/scoring-overrides", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(apiBody),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(
+          data?.error ?? `Server rejected scoring override (${res.status}).`
+        );
+      }
+
+      if (pendingOverrideConfirm.kind === "lab") {
+        saveLabOverride(
+          user,
+          pendingOverrideConfirm.itemId,
+          pendingOverrideConfirm.payload
+        );
+        setNotice(
+          `Saved override for ${pendingOverrideConfirm.itemLabel} (${pendingOverrideConfirm.newText}) and logged change to audit_log.`
+        );
+      } else {
+        saveSymptomOverride(
+          user,
+          pendingOverrideConfirm.itemId,
+          pendingOverrideConfirm.points
+        );
+        setNotice(
+          `Saved override for ${pendingOverrideConfirm.itemLabel} (${pendingOverrideConfirm.newText}) and logged change to audit_log.`
+        );
+      }
+      setPendingOverrideConfirm(null);
+      syncScoringEditFields();
       refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update points.");
+      setError(
+        err instanceof Error ? err.message : "Failed to save scoring override."
+      );
+    }
+  };
+
+  const handleConfirmResetOverrides = async () => {
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch("/api/scoring-overrides", {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(
+          data?.error ?? `Server rejected override reset (${res.status}).`
+        );
+      }
+
+      resetScoringOverridesToModelDefaults(user);
+      setConfirmResetOverridesOpen(false);
+      setPendingOverrideConfirm(null);
+      syncScoringEditFields();
+      setNotice("All scoring points and lab ranges reset to model defaults.");
+      refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to reset overrides."
+      );
     }
   };
 
@@ -792,8 +926,116 @@ export default function SystemManagementPage() {
         {/* ===================================================================
             SECTION 3: SCORING & LAB RANGES
            =================================================================== */}
-        {activeSection === "scoring_labs" && (
-          <motion.section {...fadeUp} className="space-y-8">
+        {activeSection === "scoring_labs" && effectiveScoring && (
+          <motion.section {...fadeUp} className="space-y-6">
+            {/* Safety Banners & Reset to Model Defaults */}
+            {effectiveScoring.hasStaleModelOverrides && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#C0504D]/45 bg-[#C0504D]/10 px-4 py-3.5 text-[14px] text-[#C0504D]">
+                <div className="flex items-center gap-2.5">
+                  <AlertTriangle className="h-4.5 w-4.5 shrink-0" />
+                  <span className="font-medium">
+                    A new model version was loaded. Review or reset your
+                    customized values.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {effectiveScoring.hasOverrides && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#E3A21A]/50 bg-[#E3A21A]/12 px-4 py-3.5 text-[14px] text-[#9A6B08]">
+                <div className="flex items-center gap-2.5">
+                  <AlertCircle className="h-4.5 w-4.5 shrink-0" />
+                  <span className="font-medium">
+                    Some values differ from the model team&apos;s version.
+                  </span>
+                </div>
+                <span className="font-mono text-[12px]">
+                  Active settings: {effectiveScoring.scoringSettingsVersion}
+                </span>
+              </div>
+            )}
+
+            {/* Confirmation Card before saving any override: "Change [item] from [old] to [new]?" */}
+            {pendingOverrideConfirm && (
+              <div className="rounded-xl border border-primary/40 bg-primary/[0.08] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="text-[14px] text-foreground">
+                  <strong className="font-semibold">Confirm change:</strong>{" "}
+                  Change <strong>{pendingOverrideConfirm.itemLabel}</strong>{" "}
+                  from{" "}
+                  <span className="font-mono">
+                    {pendingOverrideConfirm.oldText}
+                  </span>{" "}
+                  to{" "}
+                  <span className="font-mono">
+                    {pendingOverrideConfirm.newText}
+                  </span>
+                  ?
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleConfirmPendingOverride}
+                    className="rounded-lg bg-primary px-3.5 py-1.5 text-[13px] font-medium text-primary-foreground hover:bg-primary-hover"
+                  >
+                    Confirm Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPendingOverrideConfirm(null)}
+                    className="rounded-lg border border-border bg-background px-3 py-1.5 text-[13px] font-medium text-foreground"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Top Action Bar: Active Settings Version + Reset to Model Defaults */}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-5 py-3.5">
+              <div className="text-[13px] text-muted-foreground">
+                Active scoring version:{" "}
+                <strong className="font-mono text-foreground">
+                  {effectiveScoring.scoringSettingsVersion}
+                </strong>
+              </div>
+              {!confirmResetOverridesOpen ? (
+                <button
+                  type="button"
+                  disabled={!effectiveScoring.hasOverrides}
+                  onClick={() => setConfirmResetOverridesOpen(true)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-[13px] font-medium transition-colors",
+                    effectiveScoring.hasOverrides
+                      ? "border-[#C0504D]/40 bg-[#C0504D]/10 text-[#C0504D] hover:bg-[#C0504D]/20"
+                      : "border-border bg-background text-muted-foreground opacity-60 cursor-not-allowed"
+                  )}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span>Reset to model defaults</span>
+                </button>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[13px] font-medium text-[#C0504D]">
+                    Delete all overrides and restore model.json defaults?
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleConfirmResetOverrides}
+                    className="rounded-lg bg-[#C0504D] px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-[#a6423f]"
+                  >
+                    Confirm Reset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmResetOverridesOpen(false)}
+                    className="rounded-lg border border-border bg-background px-3 py-1.5 text-[12px] font-medium text-foreground"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Normal Ranges & Max Points for Laboratory Tests */}
             <div className="rounded-2xl border border-border bg-card p-6 md:p-8">
               <span className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-primary mb-1">
@@ -803,8 +1045,8 @@ export default function SystemManagementPage() {
                 Normal Ranges &amp; Maximum Points for Laboratory Tests
               </h2>
               <p className="text-[14px] text-muted-foreground mb-5">
-                Adjusting a normal range or max points updates live visit
-                scoring and logs the change to the audit trail.
+                Adjusting a normal range or max points saves an override on top
+                of model.json and logs the change to the audit trail.
               </p>
 
               <div className="overflow-x-auto rounded-xl border border-border bg-background">
@@ -821,7 +1063,7 @@ export default function SystemManagementPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {labRanges.map((lab) => {
+                    {effectiveScoring.labs.map((lab) => {
                       const edit = labEdits[lab.id] ?? {
                         low: String(lab.low),
                         high: String(lab.high),
@@ -830,7 +1072,13 @@ export default function SystemManagementPage() {
                       return (
                         <tr key={lab.id}>
                           <td className="py-3 px-4 font-semibold text-foreground">
-                            {lab.label}
+                            <div>{lab.label}</div>
+                            {lab.isOverridden && (
+                              <span className="block text-[11px] font-normal text-[#9A6B08]">
+                                Model default: {lab.defaultLow}–
+                                {lab.defaultHigh}, max +{lab.defaultMaxPoints}
+                              </span>
+                            )}
                           </td>
                           <td className="py-3 px-4 text-muted-foreground">
                             {lab.unit}
@@ -874,7 +1122,7 @@ export default function SystemManagementPage() {
                             <input
                               type="number"
                               min={0}
-                              max={10}
+                              step={1}
                               value={edit.max_points}
                               onChange={(e) =>
                                 setLabEdits((prev) => ({
@@ -891,7 +1139,7 @@ export default function SystemManagementPage() {
                           <td className="py-3 px-4 text-right">
                             <button
                               type="button"
-                              onClick={() => handleSaveLabRange(lab.id)}
+                              onClick={() => handleRequestSaveLabRange(lab.id)}
                               className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-[12px] font-medium text-primary-foreground hover:bg-primary-hover"
                             >
                               <Save className="h-3.5 w-3.5" />
@@ -915,53 +1163,62 @@ export default function SystemManagementPage() {
                 Points Assigned to Each Clinical Finding
               </h2>
               <p className="text-[14px] text-muted-foreground mb-5">
-                Set the point contribution of each symptom or examination item.
+                Whole numbers from −2 to +5. Default values come from
+                model.json.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {medicalLists
-                  .filter((m) => m.category === "symptom")
-                  .map((sym) => {
-                    const val =
-                      symptomPointEdits[sym.id] ?? String(sym.points ?? 0);
-                    return (
-                      <div
-                        key={sym.id}
-                        className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background p-3.5"
-                      >
-                        <div>
-                          <p className="text-[14px] font-semibold text-foreground">
-                            {sym.name}
-                          </p>
-                          <span className="text-[12px] text-muted-foreground">
-                            Group: {sym.groupName}
+                {effectiveScoring.features.map((sym) => {
+                  const val =
+                    symptomPointEdits[sym.id] ?? String(sym.points);
+                  const defaultLabel =
+                    sym.defaultPoints > 0
+                      ? `+${sym.defaultPoints}`
+                      : String(sym.defaultPoints);
+                  return (
+                    <div
+                      key={sym.id}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background p-3.5"
+                    >
+                      <div>
+                        <p className="text-[14px] font-semibold text-foreground">
+                          {sym.label}
+                        </p>
+                        <span className="text-[12px] text-muted-foreground">
+                          Group: {sym.group}
+                        </span>
+                        {sym.isOverridden && (
+                          <span className="block text-[11px] font-medium text-[#9A6B08]">
+                            Model default: {defaultLabel} pts
                           </span>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <input
-                            type="number"
-                            min={-5}
-                            max={10}
-                            value={val}
-                            onChange={(e) =>
-                              setSymptomPointEdits((prev) => ({
-                                ...prev,
-                                [sym.id]: e.target.value,
-                              }))
-                            }
-                            className="w-16 rounded-lg border border-border bg-card px-2.5 py-1 font-mono text-[13px] text-foreground text-center"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleSaveSymptomPoints(sym)}
-                            className="rounded-lg bg-primary px-3 py-1.5 text-[12px] font-medium text-primary-foreground hover:bg-primary-hover"
-                          >
-                            Save
-                          </button>
-                        </div>
+                        )}
                       </div>
-                    );
-                  })}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <input
+                          type="number"
+                          min={-2}
+                          max={5}
+                          step={1}
+                          value={val}
+                          onChange={(e) =>
+                            setSymptomPointEdits((prev) => ({
+                              ...prev,
+                              [sym.id]: e.target.value,
+                            }))
+                          }
+                          className="w-16 rounded-lg border border-border bg-card px-2.5 py-1 font-mono text-[13px] text-foreground text-center"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRequestSaveSymptomPoints(sym.id)}
+                          className="rounded-lg bg-primary px-3 py-1.5 text-[12px] font-medium text-primary-foreground hover:bg-primary-hover"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </motion.section>

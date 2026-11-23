@@ -177,6 +177,75 @@ export function validateManualResearchCaseInput(input: {
   };
 }
 
+export function validateSymptomPointsOverride(rawPoints: unknown): number {
+  if (rawPoints === "" || rawPoints === null || rawPoints === undefined) {
+    throw new ValidationError(
+      "Symptom points must be a whole number between -2 and 5."
+    );
+  }
+  const num = Number(rawPoints);
+  if (!Number.isFinite(num) || !Number.isInteger(num) || num < -2 || num > 5) {
+    throw new ValidationError(
+      "Symptom points must be a whole number between -2 and 5."
+    );
+  }
+  return num;
+}
+
+export function validateLabRangeOverride(input: {
+  low: unknown;
+  high: unknown;
+  max_points: unknown;
+}): { low: number; high: number; max_points: number } {
+  if (
+    input.low === "" ||
+    input.low === null ||
+    input.low === undefined ||
+    input.high === "" ||
+    input.high === null ||
+    input.high === undefined
+  ) {
+    throw new ValidationError(
+      "Lab normal low and normal high must be valid numbers with low less than high."
+    );
+  }
+  const low = Number(input.low);
+  const high = Number(input.high);
+  if (!Number.isFinite(low) || !Number.isFinite(high)) {
+    throw new ValidationError(
+      "Lab normal low and normal high must be valid numbers."
+    );
+  }
+  if (low < 0) {
+    throw new ValidationError("Lab normal low cannot be negative.");
+  }
+  if (low >= high) {
+    throw new ValidationError("Lab normal low must be less than normal high.");
+  }
+
+  if (
+    input.max_points === "" ||
+    input.max_points === null ||
+    input.max_points === undefined
+  ) {
+    throw new ValidationError(
+      "Lab max points must be a whole number of 0 or more."
+    );
+  }
+  const maxPoints = Number(input.max_points);
+  if (
+    !Number.isFinite(maxPoints) ||
+    !Number.isInteger(maxPoints) ||
+    maxPoints < 0
+  ) {
+    throw new ValidationError(
+      "Lab max points must be a whole number of 0 or more."
+    );
+  }
+
+  return { low, high, max_points: maxPoints };
+}
+
 export const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 /**

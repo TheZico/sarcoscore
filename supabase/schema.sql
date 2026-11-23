@@ -117,6 +117,18 @@ create table if not exists public.audit_log (
   at timestamptz not null default now()
 );
 
+-- 10. SCORING OVERRIDES (Admin edits layered on top of src/data/model.json)
+create table if not exists public.scoring_overrides (
+  item_id text primary key,
+  item_type text not null check (item_type in ('symptom', 'lab')),
+  new_value jsonb not null,
+  base_model_version text not null,
+  override_version integer not null default 1 check (override_version >= 1),
+  edited_by uuid references public.profiles(id) on delete set null,
+  edited_by_email text not null,
+  edited_at timestamptz not null default now()
+);
+
 -- ============================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ============================================================================
@@ -129,6 +141,7 @@ alter table public.lab_ranges enable row level security;
 alter table public.imported_cases enable row level security;
 alter table public.patient_results enable row level security;
 alter table public.audit_log enable row level security;
+alter table public.scoring_overrides enable row level security;
 
 -- PROFILES: Admin full access; users can read their own profile
 create policy "profiles_select_self_or_admin" on public.profiles
@@ -194,6 +207,24 @@ create policy "audit_log_insert_authenticated" on public.audit_log
 
 create policy "audit_log_admin_select" on public.audit_log
   for select using (public.current_user_role() = 'admin');
+
+-- SCORING OVERRIDES: Authenticated users can read; ONLY Admin can insert, update, or delete
+create policy "scoring_overrides_read_authenticated" on public.scoring_overrides
+  for select to authenticated
+  using (true);
+
+create policy "scoring_overrides_admin_insert" on public.scoring_overrides
+  for insert to authenticated
+  with check (public.current_user_role() = 'admin');
+
+create policy "scoring_overrides_admin_update" on public.scoring_overrides
+  for update to authenticated
+  using (public.current_user_role() = 'admin')
+  with check (public.current_user_role() = 'admin');
+
+create policy "scoring_overrides_admin_delete" on public.scoring_overrides
+  for delete to authenticated
+  using (public.current_user_role() = 'admin');
 
 -- Prevent any UPDATE or DELETE on audit_log (append-only immutable audit trail)
 create or replace function public.prevent_audit_log_mutation()
